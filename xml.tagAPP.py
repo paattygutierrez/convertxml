@@ -114,7 +114,19 @@ def processar_nfe_por_item(caminho_xml, ns):
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
         infAdic = infNFe.find('ns:infAdic', ns)
         transp = infNFe.find('ns:transp', ns)
-        cobr = infNFe.find('ns:cobr', ns)
+
+        # Valores totais da nota
+        totais_nota = {
+            'Vlr Total NFe': formatar_valor(total.findtext('ns:vNF', default='0', namespaces=ns)),
+            'Vlr ICMS Total': formatar_valor(total.findtext('ns:vICMS', default='0', namespaces=ns)),
+            'Vlr IPI Total': formatar_valor(total.findtext('ns:vIPI', default='0', namespaces=ns)),
+            'Vlr PIS Total': formatar_valor(total.findtext('ns:vPIS', default='0', namespaces=ns)),
+            'Vlr COFINS Total': formatar_valor(total.findtext('ns:vCOFINS', default='0', namespaces=ns)),
+            'Vlr Frete Total': formatar_valor(total.findtext('ns:vFrete', default='0', namespaces=ns)),
+            'Vlr Seguro Total': formatar_valor(total.findtext('ns:vSeg', default='0', namespaces=ns)),
+            'Vlr Desconto Total': formatar_valor(total.findtext('ns:vDesc', default='0', namespaces=ns)),
+            'Observacoes NFe': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
+        }
 
         dados_itens = []
         for item in itens:
@@ -142,14 +154,12 @@ def processar_nfe_por_item(caminho_xml, ns):
                 'Quantidade': prod.findtext('ns:qCom', default='', namespaces=ns),
                 'Unidade': prod.findtext('ns:uCom', default='', namespaces=ns),
                 'Valor Unitário': formatar_valor(prod.findtext('ns:vUnCom', default='0', namespaces=ns)),
-                'Valor Total': formatar_valor(prod.findtext('ns:vProd', default='0', namespaces=ns)),
+                'Valor Total Item': formatar_valor(prod.findtext('ns:vProd', default='0', namespaces=ns)),
                 'Observações Item': infAdicProd.text if infAdicProd is not None else '',
-                'Observações NFe': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else '',
-                'Transportador': transp.findtext('ns:transporta/ns:xNome', default='', namespaces=ns) if transp is not None else '',
-                'Volume': transp.findtext('ns:vol/ns:qVol', default='', namespaces=ns) if transp is not None else ''
+                **totais_nota  # Inclui todos os totais da nota em cada item
             }
 
-            # Informações de impostos
+            # Informações de impostos do item
             if imposto is not None:
                 icms = imposto.find('.//ns:ICMS', ns)
                 ipi = imposto.find('.//ns:IPI', ns)
@@ -159,13 +169,13 @@ def processar_nfe_por_item(caminho_xml, ns):
                 if icms is not None:
                     for child in icms:
                         if child.tag.endswith('ICMS00') or child.tag.endswith('ICMS20'):
-                            dados['Alíquota ICMS'] = child.findtext('ns:pICMS', default='', namespaces=ns)
-                            dados['Valor ICMS'] = formatar_valor(child.findtext('ns:vICMS', default='0', namespaces=ns))
+                            dados['Alíquota ICMS Item'] = child.findtext('ns:pICMS', default='', namespaces=ns)
+                            dados['Valor ICMS Item'] = formatar_valor(child.findtext('ns:vICMS', default='0', namespaces=ns))
                             break
 
-                dados['Valor IPI'] = formatar_valor(ipi.findtext('.//ns:vIPI', default='0', namespaces=ns)) if ipi is not None else '0,00'
-                dados['Valor PIS'] = formatar_valor(pis.findtext('.//ns:vPIS', default='0', namespaces=ns)) if pis is not None else '0,00'
-                dados['Valor COFINS'] = formatar_valor(cofins.findtext('.//ns:vCOFINS', default='0', namespaces=ns)) if cofins is not None else '0,00'
+                dados['Valor IPI Item'] = formatar_valor(ipi.findtext('.//ns:vIPI', default='0', namespaces=ns)) if ipi is not None else '0,00'
+                dados['Valor PIS Item'] = formatar_valor(pis.findtext('.//ns:vPIS', default='0', namespaces=ns)) if pis is not None else '0,00'
+                dados['Valor COFINS Item'] = formatar_valor(cofins.findtext('.//ns:vCOFINS', default='0', namespaces=ns)) if cofins is not None else '0,00'
 
             dados_itens.append(dados)
 
@@ -216,6 +226,7 @@ def main():
     )
     
     # Mostrar opção de layout apenas para NFe
+    layout = ""
     if tipo_doc == "NFe":
         layout = st.radio(
             "Layout de saída:",
@@ -262,7 +273,12 @@ def main():
                         st.dataframe(df)
                         
                         excel_data = criar_excel(df)
-                        nome_arquivo = f"{tipo_doc}_{layout.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+                        
+                        # Nome do arquivo condicional
+                        if tipo_doc == "NFe":
+                            nome_arquivo = f"{tipo_doc}_{layout.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+                        else:
+                            nome_arquivo = f"{tipo_doc}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
                         
                         st.download_button(
                             "Baixar Excel",
