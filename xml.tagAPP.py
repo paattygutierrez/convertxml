@@ -7,7 +7,7 @@ import tempfile
 import streamlit as st
 
 # --- Configuração da Página ---
-st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📄")
+st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📊")
 
 # --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
@@ -111,7 +111,7 @@ def criar_excel(df):
 
 # --- Interface ---
 st.title("📄 Conversor XML - Excel")
-st.write("Converta seus arquivos XML para Excel.")
+st.write('<p style="font-size:14px;">Converta seus arquivos XML para Excel.</p>', unsafe_allow_html=True)
 st.markdown("Desenvolvido por Patricia Gutierrez")
 
 uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs (size 200MB)", type="zip")
