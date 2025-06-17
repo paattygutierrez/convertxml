@@ -6,10 +6,8 @@ from datetime import datetime
 import tempfile
 import streamlit as st
 
-# --- Configuração da Página ---
-st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📊")
+st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📄")
 
-# --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(destino)
@@ -30,7 +28,7 @@ def obter_status_nfe(root, ns):
         return f"{cStat} - {xMotivo}" if cStat and xMotivo else ''
     return ''
 
-def processar_xml(caminho_xml, ns):
+def processar_nfe(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
         root = tree.getroot()
@@ -78,8 +76,7 @@ def processar_xml(caminho_xml, ns):
                     'VICMS ST': 0.0,
                     'Vlr Frete': 0.0,
                     'Vlr Seguro': 0.0,
-                    'Chave de acesso': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
-                    
+                    'Chave de acesso': infNFe.get('Id')[3:] if infNFe.get('Id') else ''
                 }
 
             dados_por_cfop[cfop]['Vlr Nota'] += float(vProd.replace(',', '.'))
@@ -101,6 +98,34 @@ def processar_xml(caminho_xml, ns):
         st.error(f"❌ Erro ao processar {os.path.basename(caminho_xml)}: {str(e)}")
         return []
 
+def processar_cte(caminho_xml, ns):
+    try:
+        tree = ET.parse(caminho_xml)
+        root = tree.getroot()
+        infCte = root.find('.//ns:infCte', ns)
+        if infCte is None:
+            return []
+
+        ide = infCte.find('ns:ide', ns)
+        emit = infCte.find('ns:emit', ns)
+        vPrest = infCte.find('ns:vPrest', ns)
+        imp = infCte.find('ns:imp', ns)
+
+        return [{
+            'Número CTe': ide.findtext('ns:nCT', default='', namespaces=ns),
+            'Data Emissão': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
+            'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
+            'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
+            'UF Emitente': emit.findtext('ns:enderEmit/ns:UF', default='', namespaces=ns),
+            'Valor Prestação': formatar_valor(vPrest.findtext('ns:vTPrest', default='0', namespaces=ns)),
+            'Valor ICMS': formatar_valor(imp.findtext('.//ns:vICMS', default='0', namespaces=ns)),
+            'Aliquota ICMS': formatar_valor(imp.findtext('.//ns:pICMS', default='0', namespaces=ns)),
+            'Chave de acesso': infCte.get('Id')[3:] if infCte.get('Id') else ''
+        }]
+    except Exception as e:
+        st.error(f"❌ Erro ao processar {os.path.basename(caminho_xml)}: {str(e)}")
+        return []
+
 def criar_excel(df):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
         df.to_excel(tmp.name, index=False, engine='openpyxl')
@@ -111,10 +136,15 @@ def criar_excel(df):
 
 # --- Interface ---
 st.title("📄 Conversor XML - Excel")
-st.write('<p style="font-size:18px;">Converta seus arquivos XML para Excel.</p>', unsafe_allow_html=True)
-st.markdown('<p style="font-size:14px; <b>">Desenvolvido por Patricia Gutierrez</p></b>',unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs (size 200MB)", type="zip")
+st.markdown(
+    '<p style="font-size:14px; color:gray;">Converta arquivos XML de NFe ou CTe para Excel.</p>',
+    unsafe_allow_html=True
+)
+
+tipo_xml = st.radio("Selecione o tipo de XML:", ["NFe", "CTe"])
+
+uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
 
 if uploaded_file:
     with st.spinner("Processando..."):
@@ -124,7 +154,6 @@ if uploaded_file:
                 f.write(uploaded_file.getbuffer())
 
             xml_files = extrair_xmls_de_zip(zip_path, temp_dir)
-
             if not xml_files:
                 st.warning("Nenhum XML encontrado.")
             else:
@@ -133,7 +162,13 @@ if uploaded_file:
 
                 for i, xml in enumerate(xml_files):
                     st.progress((i + 1) / len(xml_files))
-                    dados = processar_xml(xml, ns)
+                    if tipo_xml == "NFe":
+                        dados = processar_nfe(xml, ns)
+                    elif tipo_xml == "CTe":
+                        dados = processar_cte(xml, ns)
+                    else:
+                        dados = []
+
                     todos_dados.extend(dados)
 
                 if todos_dados:
@@ -141,7 +176,15 @@ if uploaded_file:
                     st.dataframe(df)
 
                     excel_data = criar_excel(df)
-                    st.download_button("⬇️ Baixar Excel", data=excel_data,
-                        file_name="NFes_CFOP.xlsx",
+                    st.download_button(
+                        "⬇️ Baixar Excel",
+                        data=excel_data,
+                        file_name=f"{tipo_xml}_convertido.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
+
+# Rodapé com assinatura
+st.markdown(
+    '<p style="font-size:13px; color:gray;">Desenvolvido por <strong>Patricia Gutierrez</strong></p>',
+    unsafe_allow_html=True
+)
