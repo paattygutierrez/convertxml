@@ -111,7 +111,7 @@ def criar_excel(df):
 
 # --- Interface ---
 st.title("📄 Conversor XML - Excel")
-st.write('<p style="font-size:14px;">Converta seus arquivos XML para Excel.</p>', unsafe_allow_html=True)
+st.write('<p style="font-size:18px;">Converta seus arquivos XML para Excel.</p>', unsafe_allow_html=True)
 st.markdown("Desenvolvido por Patricia Gutierrez")
 
 uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs (size 200MB)", type="zip")
