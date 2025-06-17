@@ -161,7 +161,7 @@ def processar_cte(caminho_xml):
 
 # --- Interface ---
 st.title("📄 Conversor XML - Excel")
-st.markdown('<p style="font-size:16px; color:gray">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel. <br><b>Desenvolvido por Patricia Gutierrez</b></p>', unsafe_allow_html=True)
+st.markdown('<p style="font-size:17px; color:gray">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel. <br><b>Desenvolvido por Patricia Gutierrez</b></p>', unsafe_allow_html=True)
 
 tipo_doc = st.radio("Selecione o tipo de documento:", ["NFe", "CTe"], horizontal=True)
 uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
