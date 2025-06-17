@@ -7,7 +7,7 @@ import streamlit as st
 from datetime import datetime
 
 # --- Configuração da Página ---
-st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📄")
+st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📊")
 
 # --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
