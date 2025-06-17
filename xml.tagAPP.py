@@ -7,7 +7,7 @@ import tempfile
 import streamlit as st
 
 # --- Configuração da Página ---
-st.set_page_config(page_title="Conversor XML NFe por CFOP", layout="wide", page_icon="📄")
+st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📄")
 
 # --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
@@ -110,8 +110,8 @@ def criar_excel(df):
     return data
 
 # --- Interface ---
-st.title("📄 Conversor XML NFe por CFOP")
-st.write("Converta arquivos ZIP de NFe em planilhas Excel com dados agrupados por CFOP.")
+st.title("📄 Conversor XML - Excel")
+st.write("Converta seus arquivos XML para Excel.")
 
 uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
 
