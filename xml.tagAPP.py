@@ -207,6 +207,11 @@ def criar_excel(df):
 def main():
     st.title("📄 Conversor XML para Excel")
     st.markdown('<p style="font-size:16px;">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel</p>', unsafe_allow_html=True)
+       st.markdown("""
+        <div class="footer">
+            Desenvolvido por <b>Patricia Gutierrez</b> | Versão 1.0
+        </div>
+    """, unsafe_allow_html=True)
     
     with st.expander("ℹ️ Instruções", expanded=False):
         st.write("""
@@ -282,11 +287,7 @@ def main():
                         st.warning("ℹ️ Nenhum dado válido foi encontrado nos arquivos processados.")
 
     # Rodapé
-    st.markdown("""
-        <div class="footer">
-            Desenvolvido por <b>Patricia Gutierrez</b> | Versão 1.0
-        </div>
-    """, unsafe_allow_html=True)
+ 
 
 if __name__ == "__main__":
     main()
