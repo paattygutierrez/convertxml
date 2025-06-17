@@ -79,7 +79,7 @@ def processar_xml(caminho_xml, ns):
                     'Vlr Frete': 0.0,
                     'Vlr Seguro': 0.0,
                     'Chave de acesso': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
-                    'Status': status
+                    
                 }
 
             dados_por_cfop[cfop]['Vlr Nota'] += float(vProd.replace(',', '.'))
@@ -112,6 +112,7 @@ def criar_excel(df):
 # --- Interface ---
 st.title("📄 Conversor XML - Excel")
 st.write("Converta seus arquivos XML para Excel.")
+st.markdown("Desenvolvido por Patricia Gutierrez")
 
 uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
 
