@@ -1,13 +1,15 @@
 import os
 import zipfile
+import tempfile
 import xml.etree.ElementTree as ET
 import pandas as pd
-from datetime import datetime
-import tempfile
 import streamlit as st
+from datetime import datetime
 
+# --- Configuração da Página ---
 st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📄")
 
+# --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(destino)
@@ -20,6 +22,7 @@ def formatar_valor(val):
         return '0,00'
     return val.replace('.', ',')
 
+# ---------- NFe ----------
 def obter_status_nfe(root, ns):
     protNFe = root.find('.//ns:protNFe', ns)
     if protNFe is not None:
@@ -40,7 +43,6 @@ def processar_nfe(caminho_xml, ns):
         emit = infNFe.find('ns:emit', ns)
         itens = infNFe.findall('ns:det', ns)
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
-        status = obter_status_nfe(root, ns)
 
         dados_por_cfop = {}
         for item in itens:
@@ -76,7 +78,7 @@ def processar_nfe(caminho_xml, ns):
                     'VICMS ST': 0.0,
                     'Vlr Frete': 0.0,
                     'Vlr Seguro': 0.0,
-                    'Chave de acesso': infNFe.get('Id')[3:] if infNFe.get('Id') else ''
+                    'Chave de acesso': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
                 }
 
             dados_por_cfop[cfop]['Vlr Nota'] += float(vProd.replace(',', '.'))
@@ -95,36 +97,74 @@ def processar_nfe(caminho_xml, ns):
         return list(dados_por_cfop.values())
 
     except Exception as e:
-        st.error(f"❌ Erro ao processar {os.path.basename(caminho_xml)}: {str(e)}")
+        st.error(f"❌ Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
 
-def processar_cte(caminho_xml, ns):
+# ---------- CTe ----------
+def format_number(value):
+    if value and any(c.isdigit() for c in value):
+        return value.replace('.', ',')
+    return value
+
+def get_text(element, path, ns):
+    tag = element.find(path, ns)
+    return format_number(tag.text) if tag is not None and tag.text else None
+
+def get_valor_icms(element, ns):
+    icms_total = 0.0
+    icms_tags = [
+        'ICMS00', 'ICMS10', 'ICMS20', 'ICMS30', 'ICMS45', 'ICMS60', 
+        'ICMS70', 'ICMS90', 'ICMSPart', 'ICMSST', 'ICMSUFFim', 
+        'ICMSUFRemet', 'ICMSOutraUF'
+    ]
+    campos_icms = ['vICMS', 'vICMSST', 'vICMSUFFim', 'vICMSUFRemet', 'vICMSOutraUF']
+    for tag in icms_tags:
+        for campo in campos_icms:
+            valor = element.find(f'ns:imp/ns:ICMS/ns:{tag}/ns:{campo}', ns)
+            if valor is not None and valor.text:
+                try:
+                    icms_total += float(valor.text)
+                except ValueError:
+                    pass
+    return format_number(str(icms_total)) if icms_total > 0 else None
+
+def processar_cte(caminho_xml):
     try:
         tree = ET.parse(caminho_xml)
         root = tree.getroot()
+        ns = {'ns': 'http://www.portalfiscal.inf.br/cte'}
+
         infCte = root.find('.//ns:infCte', ns)
         if infCte is None:
             return []
 
-        ide = infCte.find('ns:ide', ns)
-        emit = infCte.find('ns:emit', ns)
-        vPrest = infCte.find('ns:vPrest', ns)
-        imp = infCte.find('ns:imp', ns)
-
-        return [{
-            'Número CTe': ide.findtext('ns:nCT', default='', namespaces=ns),
-            'Data Emissão': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
-            'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
-            'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
-            'UF Emitente': emit.findtext('ns:enderEmit/ns:UF', default='', namespaces=ns),
-            'Valor Prestação': formatar_valor(vPrest.findtext('ns:vTPrest', default='0', namespaces=ns)),
-            'Valor ICMS': formatar_valor(imp.findtext('.//ns:vICMS', default='0', namespaces=ns)),
-            'Aliquota ICMS': formatar_valor(imp.findtext('.//ns:pICMS', default='0', namespaces=ns)),
+        dados = {
+            'Número CTe': get_text(infCte, 'ns:ide/ns:nCT', ns),
+            'Data Emissão': get_text(infCte, 'ns:ide/ns:dhEmi', ns)[:10],
+            'CFOP': get_text(infCte, 'ns:ide/ns:CFOP', ns),
+            'Tipo Serviço': get_text(infCte, 'ns:ide/ns:tpServ', ns),
+            'Emitente': get_text(infCte, 'ns:emit/ns:xNome', ns),
+            'CNPJ Emitente': get_text(infCte, 'ns:emit/ns:CNPJ', ns),
+            'UF Remetente': get_text(infCte, 'ns:rem/ns:enderReme/ns:UF', ns),
+            'Remetente': get_text(infCte, 'ns:rem/ns:xNome', ns),
+            'Destinatário': get_text(infCte, 'ns:dest/ns:xNome', ns),
+            'UF Destinatário': get_text(infCte, 'ns:dest/ns:enderDest/ns:UF', ns),
+            'Valor Total': get_text(infCte, 'ns:vPrest/ns:vTPrest', ns),
+            'Valor ICMS': get_valor_icms(infCte, ns),
             'Chave de acesso': infCte.get('Id')[3:] if infCte.get('Id') else ''
-        }]
+        }
+
+        return [dados]
     except Exception as e:
-        st.error(f"❌ Erro ao processar {os.path.basename(caminho_xml)}: {str(e)}")
+        st.error(f"❌ Erro ao processar CTe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
+
+# --- Interface ---
+st.title("📄 Conversor XML - Excel")
+st.markdown('<p style="font-size:14px; color:gray">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel. <br><b>Desenvolvido por Patricia Gutierrez</b></p>', unsafe_allow_html=True)
+
+tipo_doc = st.selectbox("Selecione o tipo de documento:", ["NFe", "CTe"])
+uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
 
 def criar_excel(df):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
@@ -134,18 +174,6 @@ def criar_excel(df):
         os.unlink(tmp.name)
     return data
 
-# --- Interface ---
-st.title("📄 Conversor XML - Excel")
-
-st.markdown(
-    '<p style="font-size:14px; color:gray;">Converta arquivos XML de NFe ou CTe para Excel.</p>',
-    unsafe_allow_html=True
-)
-
-tipo_xml = st.radio("Selecione o tipo de XML:", ["NFe", "CTe"])
-
-uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
-
 if uploaded_file:
     with st.spinner("Processando..."):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -154,37 +182,25 @@ if uploaded_file:
                 f.write(uploaded_file.getbuffer())
 
             xml_files = extrair_xmls_de_zip(zip_path, temp_dir)
+
             if not xml_files:
                 st.warning("Nenhum XML encontrado.")
             else:
-                ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
-                todos_dados = []
-
+                dados_totais = []
                 for i, xml in enumerate(xml_files):
                     st.progress((i + 1) / len(xml_files))
-                    if tipo_xml == "NFe":
-                        dados = processar_nfe(xml, ns)
-                    elif tipo_xml == "CTe":
-                        dados = processar_cte(xml, ns)
+                    if tipo_doc == "NFe":
+                        ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
+                        dados_totais.extend(processar_nfe(xml, ns))
                     else:
-                        dados = []
+                        dados_totais.extend(processar_cte(xml))
 
-                    todos_dados.extend(dados)
-
-                if todos_dados:
-                    df = pd.DataFrame(todos_dados)
+                if dados_totais:
+                    df = pd.DataFrame(dados_totais)
                     st.dataframe(df)
 
                     excel_data = criar_excel(df)
-                    st.download_button(
-                        "⬇️ Baixar Excel",
-                        data=excel_data,
-                        file_name=f"{tipo_xml}_convertido.xlsx",
+                    st.download_button("⬇️ Baixar Excel", data=excel_data,
+                        file_name=f"{tipo_doc}_XMLs.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-
-# Rodapé com assinatura
-st.markdown(
-    '<p style="font-size:13px; color:gray;">Desenvolvido por <strong>Patricia Gutierrez</strong></p>',
-    unsafe_allow_html=True
-)
