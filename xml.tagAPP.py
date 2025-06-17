@@ -7,7 +7,43 @@ import streamlit as st
 from datetime import datetime
 
 # --- Configuração da Página ---
-st.set_page_config(page_title="Conversor XML - Excel", layout="wide", page_icon="📊")
+st.set_page_config(
+    page_title="Conversor XML - Excel", 
+    layout="wide", 
+    page_icon="📊",
+    initial_sidebar_state="expanded"
+)
+
+# --- CSS Personalizado ---
+st.markdown("""
+    <style>
+        /* Barra de progresso personalizada */
+        .stProgress > div > div > div > div {
+            height: 15px;
+            background-color: #4CAF50;
+            border-radius: 10px;
+        }
+        
+        /* Estilo dos títulos */
+        h1 {
+            color: #2e7d32;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        /* Rodapé */
+        .footer {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: #f0f2f6;
+            font-size: 12px;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- Funções ---
 def extrair_xmls_de_zip(zip_path, destino):
@@ -159,15 +195,6 @@ def processar_cte(caminho_xml):
         st.error(f"❌ Erro ao processar CTe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
 
-# --- Interface ---
-st.title("📄 Conversor XML - Excel")
-st.markdown('<p style="font-size:16px;">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel</p>', unsafe_allow_html=True)
-st.markdown('<p style="font-size:12px; color:gray;">Desenvolvido por <b>Patricia Gutierrez</b></p>', unsafe_allow_html=True)
-
-
-tipo_doc = st.radio("Selecione o tipo de documento:", ["NFe", "CTe"], horizontal=True)
-uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
-
 def criar_excel(df):
     with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
         df.to_excel(tmp.name, index=False, engine='openpyxl')
@@ -176,33 +203,90 @@ def criar_excel(df):
         os.unlink(tmp.name)
     return data
 
-if uploaded_file:
-    with st.spinner("Processando..."):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            zip_path = os.path.join(temp_dir, uploaded_file.name)
-            with open(zip_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+# --- Interface Principal ---
+def main():
+    st.title("📄 Conversor XML para Excel")
+    st.markdown('<p style="font-size:16px;">Converta seus arquivos XML de <b>NFe</b> ou <b>CTe</b> para Excel</p>', unsafe_allow_html=True)
+    
+    with st.expander("ℹ️ Instruções", expanded=False):
+        st.write("""
+        1. Selecione o tipo de documento (NFe ou CTe)
+        2. Faça upload do arquivo ZIP contendo os XMLs
+        3. Aguarde o processamento
+        4. Baixe o arquivo Excel gerado
+        """)
+    
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        tipo_doc = st.radio("Tipo de documento:", ["NFe", "CTe"], horizontal=True)
+    
+    uploaded_file = st.file_uploader(
+        "Selecione o arquivo ZIP com os XMLs", 
+        type="zip",
+        help="Arquivo compactado contendo os XMLs a serem processados"
+    )
 
-            xml_files = extrair_xmls_de_zip(zip_path, temp_dir)
+    if uploaded_file:
+        with st.spinner("Preparando para processar..."):
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, uploaded_file.name)
+                with open(zip_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
 
-            if not xml_files:
-                st.warning("Nenhum XML encontrado.")
-            else:
-                dados_totais = []
-                for i, xml in enumerate(xml_files):
-                    st.progress((i + 1) / len(xml_files))
-                    if tipo_doc == "NFe":
-                        ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
-                        dados_totais.extend(processar_nfe(xml, ns))
+                xml_files = extrair_xmls_de_zip(zip_path, temp_dir)
+
+                if not xml_files:
+                    st.warning("⚠️ Nenhum arquivo XML encontrado no ZIP.")
+                else:
+                    st.success(f"🔍 {len(xml_files)} arquivo(s) XML encontrado(s)")
+                    
+                    # Container para a barra de progresso
+                    progress_container = st.empty()
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    dados_totais = []
+                    for i, xml in enumerate(xml_files):
+                        # Atualiza a barra de progresso
+                        progress = (i + 1) / len(xml_files)
+                        progress_bar.progress(progress)
+                        status_text.text(f"📂 Processando arquivo {i+1} de {len(xml_files)}...")
+                        
+                        # Processa o arquivo
+                        if tipo_doc == "NFe":
+                            ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
+                            dados_totais.extend(processar_nfe(xml, ns))
+                        else:
+                            dados_totais.extend(processar_cte(xml))
+                    
+                    # Limpa os elementos de progresso
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    if dados_totais:
+                        df = pd.DataFrame(dados_totais)
+                        
+                        st.subheader("📊 Dados Processados")
+                        st.dataframe(df.head())
+                        
+                        st.subheader("📥 Download")
+                        excel_data = criar_excel(df)
+                        st.download_button(
+                            label="⬇️ Baixar Arquivo Excel",
+                            data=excel_data,
+                            file_name=f"{tipo_doc}_Resultado_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            help="Clique para baixar o arquivo Excel com os dados processados"
+                        )
                     else:
-                        dados_totais.extend(processar_cte(xml))
+                        st.warning("ℹ️ Nenhum dado válido foi encontrado nos arquivos processados.")
 
-                if dados_totais:
-                    df = pd.DataFrame(dados_totais)
-                    st.dataframe(df)
+    # Rodapé
+    st.markdown("""
+        <div class="footer">
+            Desenvolvido por <b>Patricia Gutierrez</b> | Versão 1.0
+        </div>
+    """, unsafe_allow_html=True)
 
-                    excel_data = criar_excel(df)
-                    st.download_button("⬇️ Baixar Excel", data=excel_data,
-                        file_name=f"{tipo_doc}_XMLs.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+if __name__ == "__main__":
+    main()
