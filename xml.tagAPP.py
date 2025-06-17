@@ -186,12 +186,10 @@ def processar_nfe_por_item(caminho_xml, ns):
         return []
 
 # --- Processamento CTe ---
-def processar_cte(caminho_xml):
+def processar_cte(caminho_xml, ns):  # Adicionei o parâmetro ns
     try:
         tree = ET.parse(caminho_xml)
         root = tree.getroot()
-        ns = {'ns': 'http://www.portalfiscal.inf.br/cte'}
-
         infCte = root.find('.//ns:infCte', ns)
         if infCte is None:
             return []
@@ -266,7 +264,8 @@ def main():
                             else:
                                 dados_totais.extend(processar_nfe_por_item(xml_file, ns))
                         else:
-                            dados_totais.extend(processar_cte(xml_file))
+                            ns = {'ns': 'http://www.portalfiscal.inf.br/cte'}
+                            dados_totais.extend(processar_cte(xml_file, ns))
                     
                     if dados_totais:
                         df = pd.DataFrame(dados_totais)
