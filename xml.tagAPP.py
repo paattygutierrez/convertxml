@@ -114,7 +114,7 @@ st.title("📄 Conversor XML - Excel")
 st.write("Converta seus arquivos XML para Excel.")
 st.markdown("Desenvolvido por Patricia Gutierrez")
 
-uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
+uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs (size 200MB)", type="zip")
 
 if uploaded_file:
     with st.spinner("Processando..."):
