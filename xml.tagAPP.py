@@ -8,7 +8,7 @@ from datetime import datetime
 
 # --- Configuração da Página ---
 st.set_page_config(
-    page_title="Conversor XML para Excel", 
+    page_title="Conversor XML para Excel2", 
     layout="wide",
     page_icon="📄"
 )
