@@ -24,7 +24,7 @@ def extrair_xmls_de_zip(zip_path, destino):
 def formatar_valor(val):
     if val is None:
         return '0,00'
-    return val.replace('.', ',')
+    return str(val).replace('.', ',')
 
 # --- Processamento NFe Cabeçalho ---
 def processar_nfe_por_cabecalho(caminho_xml, ns):
@@ -51,12 +51,28 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
             vProd = prod.findtext('ns:vProd', default='0', namespaces=ns)
             vICMS = imposto.findtext('.//ns:vICMS', default='0', namespaces=ns) if imposto is not None else '0'
             pICMS = ''
+            vBCST = '0'
+            pST = '0'
+            vST = '0'
+            
             if icms is not None:
                 for child in icms:
+                    # ICMS normal
                     aliq = child.findtext('ns:pICMS', namespaces=ns)
                     if aliq:
                         pICMS = aliq
-                        break
+                    
+                    # ICMS ST
+                    vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
+                    pST_item = child.findtext('ns:pST', namespaces=ns)
+                    vST_item = child.findtext('ns:vST', namespaces=ns)
+                    
+                    if vBCST_item:
+                        vBCST = vBCST_item
+                    if pST_item:
+                        pST = pST_item
+                    if vST_item:
+                        vST = vST_item
 
             if cfop not in dados_por_cfop:
                 dados_por_cfop[cfop] = {
@@ -70,10 +86,12 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
                     'Vlr Nota': 0.0,
                     'Vlr ICMS': 0.0,
                     'Aliquota ICMS': pICMS,
+                    'Base ICMS ST': vBCST,
+                    'Aliquota ICMS ST': pST,
+                    'Vlr ICMS ST': vST,
                     'Vlr IPI': 0.0,
                     'Vlr PIS': 0.0,
                     'Vlr COFINS': 0.0,
-                    'VICMS ST': 0.0,
                     'Vlr Frete': 0.0,
                     'Vlr Seguro': 0.0,
                     'Observacoes': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
@@ -81,16 +99,19 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
 
             dados_por_cfop[cfop]['Vlr Nota'] += float(vProd.replace(',', '.'))
             dados_por_cfop[cfop]['Vlr ICMS'] += float(vICMS.replace(',', '.'))
+            dados_por_cfop[cfop]['Vlr ICMS ST'] = float(vST.replace(',', '.'))
 
         for cfop_dado in dados_por_cfop.values():
             cfop_dado['Vlr IPI'] = formatar_valor(total.findtext('ns:vIPI', default='0', namespaces=ns))
             cfop_dado['Vlr PIS'] = formatar_valor(total.findtext('ns:vPIS', default='0', namespaces=ns))
             cfop_dado['Vlr COFINS'] = formatar_valor(total.findtext('ns:vCOFINS', default='0', namespaces=ns))
-            cfop_dado['VICMS ST'] = formatar_valor(total.findtext('ns:vST', default='0', namespaces=ns))
             cfop_dado['Vlr Frete'] = formatar_valor(total.findtext('ns:vFrete', default='0', namespaces=ns))
             cfop_dado['Vlr Seguro'] = formatar_valor(total.findtext('ns:vSeg', default='0', namespaces=ns))
             cfop_dado['Vlr Nota'] = formatar_valor(str(cfop_dado['Vlr Nota']))
             cfop_dado['Vlr ICMS'] = formatar_valor(str(cfop_dado['Vlr ICMS']))
+            cfop_dado['Base ICMS ST'] = formatar_valor(str(cfop_dado['Base ICMS ST']))
+            cfop_dado['Aliquota ICMS ST'] = formatar_valor(str(cfop_dado['Aliquota ICMS ST']))
+            cfop_dado['Vlr ICMS ST'] = formatar_valor(str(cfop_dado['Vlr ICMS ST']))
 
         return list(dados_por_cfop.values())
 
@@ -125,6 +146,7 @@ def processar_nfe_por_item(caminho_xml, ns):
             'Vlr Frete Total': formatar_valor(total.findtext('ns:vFrete', default='0', namespaces=ns)),
             'Vlr Seguro Total': formatar_valor(total.findtext('ns:vSeg', default='0', namespaces=ns)),
             'Vlr Desconto Total': formatar_valor(total.findtext('ns:vDesc', default='0', namespaces=ns)),
+            'Vlr ICMS ST Total': formatar_valor(total.findtext('ns:vST', default='0', namespaces=ns)),
             'Observacoes NFe': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
         }
 
@@ -134,6 +156,39 @@ def processar_nfe_por_item(caminho_xml, ns):
             imposto = item.find('ns:imposto', ns)
             infAdicProd = item.find('ns:infAdProd', ns)
             
+            # Inicializa campos do ICMS ST
+            vBCST = '0'
+            pST = '0'
+            vST = '0'
+            pICMS = '0'
+            vICMS = '0'
+            
+            # Processa impostos
+            if imposto is not None:
+                icms = imposto.find('.//ns:ICMS', ns)
+                ipi = imposto.find('.//ns:IPI', ns)
+                pis = imposto.find('.//ns:PIS', ns)
+                cofins = imposto.find('.//ns:COFINS', ns)
+
+                if icms is not None:
+                    for child in icms:
+                        # ICMS normal
+                        if child.tag.endswith('ICMS00') or child.tag.endswith('ICMS20'):
+                            pICMS = child.findtext('ns:pICMS', default='0', namespaces=ns)
+                            vICMS = child.findtext('ns:vICMS', default='0', namespaces=ns)
+                        
+                        # ICMS ST
+                        vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
+                        pST_item = child.findtext('ns:pST', namespaces=ns)
+                        vST_item = child.findtext('ns:vST', namespaces=ns)
+                        
+                        if vBCST_item:
+                            vBCST = vBCST_item
+                        if pST_item:
+                            pST = pST_item
+                        if vST_item:
+                            vST = vST_item
+
             # Dados básicos do item
             dados = {
                 'Chave NFe': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
@@ -155,27 +210,14 @@ def processar_nfe_por_item(caminho_xml, ns):
                 'Unidade': prod.findtext('ns:uCom', default='', namespaces=ns),
                 'Valor Unitário': formatar_valor(prod.findtext('ns:vUnCom', default='0', namespaces=ns)),
                 'Valor Total Item': formatar_valor(prod.findtext('ns:vProd', default='0', namespaces=ns)),
+                'Alíquota ICMS Item': formatar_valor(pICMS),
+                'Valor ICMS Item': formatar_valor(vICMS),
+                'Base ICMS ST': formatar_valor(vBCST),
+                'Alíquota ICMS ST': formatar_valor(pST),
+                'Valor ICMS ST': formatar_valor(vST),
                 'Observações Item': infAdicProd.text if infAdicProd is not None else '',
                 **totais_nota  # Inclui todos os totais da nota em cada item
             }
-
-            # Informações de impostos do item
-            if imposto is not None:
-                icms = imposto.find('.//ns:ICMS', ns)
-                ipi = imposto.find('.//ns:IPI', ns)
-                pis = imposto.find('.//ns:PIS', ns)
-                cofins = imposto.find('.//ns:COFINS', ns)
-
-                if icms is not None:
-                    for child in icms:
-                        if child.tag.endswith('ICMS00') or child.tag.endswith('ICMS20'):
-                            dados['Alíquota ICMS Item'] = child.findtext('ns:pICMS', default='', namespaces=ns)
-                            dados['Valor ICMS Item'] = formatar_valor(child.findtext('ns:vICMS', default='0', namespaces=ns))
-                            break
-
-                dados['Valor IPI Item'] = formatar_valor(ipi.findtext('.//ns:vIPI', default='0', namespaces=ns)) if ipi is not None else '0,00'
-                dados['Valor PIS Item'] = formatar_valor(pis.findtext('.//ns:vPIS', default='0', namespaces=ns)) if pis is not None else '0,00'
-                dados['Valor COFINS Item'] = formatar_valor(cofins.findtext('.//ns:vCOFINS', default='0', namespaces=ns)) if cofins is not None else '0,00'
 
             dados_itens.append(dados)
 
@@ -186,7 +228,7 @@ def processar_nfe_por_item(caminho_xml, ns):
         return []
 
 # --- Processamento CTe ---
-def processar_cte(caminho_xml, ns):  # Adicionei o parâmetro ns
+def processar_cte(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
         root = tree.getroot()
