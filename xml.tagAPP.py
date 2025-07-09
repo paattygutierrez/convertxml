@@ -8,7 +8,7 @@ from datetime import datetime
 
 # --- Configuração da Página ---
 st.set_page_config(
-    page_title="Conversor XML para Excel", 
+    page_title="Conversor XML para Excel",
     layout="wide",
     page_icon="📄"
 )
@@ -265,6 +265,10 @@ def processar_cte(caminho_xml, ns):
         if infCte is None:
             return []
 
+        # Find the rem (Remetente) tag
+        rem = infCte.find('ns:rem', ns)
+        cnpj_remetente = rem.findtext('ns:CNPJ', namespaces=ns) if rem is not None else ''
+
         dados = {
             'Chave': infCte.get('Id')[3:] if infCte.get('Id') else '',
             'Numero NF': infCte.findtext('ns:ide/ns:nCT', namespaces=ns) or '',
@@ -272,6 +276,7 @@ def processar_cte(caminho_xml, ns):
             'Data': (infCte.findtext('ns:ide/ns:dhEmi', namespaces=ns) or '')[:10],
             'Emitente': infCte.findtext('ns:emit/ns:xNome', namespaces=ns) or '',
             'CNPJ Emitente': infCte.findtext('ns:emit/ns:CNPJ', namespaces=ns) or '',
+            'CNPJ Remetente': cnpj_remetente, # Added CNPJ Remetente for CTe
             'CFOP': infCte.findtext('ns:ide/ns:CFOP', namespaces=ns) or '',
             'Codigo Produto': '',
             'Desc': '',
@@ -280,7 +285,7 @@ def processar_cte(caminho_xml, ns):
             'Qtd': '',
             'unidade': '',
             'Vlr Unit': '',
-            'Vlr total': infCte.findtext('ns:vPrest/ns:vTPrest', namespaces=ns) or '',
+            'Vlr total': formatar_valor(infCte.findtext('ns:vPrest/ns:vTPrest', namespaces=ns) or '0'),
             'Base ICMS': '',
             'Aliquota': '',
             'Vlr ICMS': '',
@@ -305,8 +310,8 @@ def main():
     st.caption("Desenvolvido por Patricia Gutierrez")
     
     tipo_doc = st.radio(
-        "Selecione o tipo de documento:", 
-        ["NFe", "CTe"], 
+        "Selecione o tipo de documento:",
+        ["NFe", "CTe"],
         horizontal=True
     )
     
@@ -320,7 +325,7 @@ def main():
         )
     
     uploaded_file = st.file_uploader(
-        "Selecione o arquivo ZIP com os XMLs", 
+        "Selecione o arquivo ZIP com os XMLs",
         type="zip"
     )
 
@@ -356,8 +361,9 @@ def main():
                     
                     if dados_totais:
                         # Definir a ordem das colunas
+                        # Added 'CNPJ Remetente' to the ordered columns
                         colunas_ordenadas = [
-                            'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente',
+                            'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente', 'CNPJ Remetente',
                             'CFOP', 'Codigo Produto', 'Desc', 'NCM', 'Obs Item', 'Qtd', 'unidade',
                             'Vlr Unit', 'Vlr total', 'Base ICMS', 'Aliquota', 'Vlr ICMS',
                             'Base ICMS ST', 'Vlr ICMS ST', 'Vlr PIS', 'Vlr COFINS', 'Vlr Frete',
