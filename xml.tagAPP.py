@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
-st.set_page_config(page_title="Conversor XML para Excel2", layout="wide", page_icon="\ud83d\udcc4")
+st.set_page_config(page_title="Conversor XML para Excel", layout="wide", page_icon="📄")
 
 def extrair_xmls_de_zip(zip_path, destino):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
