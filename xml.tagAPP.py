@@ -38,6 +38,7 @@ def processar_nfe_por_item(caminho_xml, ns):
         ide = infNFe.find('ns:ide', ns)
         emit = infNFe.find('ns:emit', ns)
         dest = infNFe.find('ns:dest', ns) or infNFe.find('ns:destinatario', ns)
+        cnpj_destinatario = dest.findtext('ns:CNPJ', default='', namespaces=ns) if dest is not None else ''
         itens = infNFe.findall('ns:det', ns)
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
         infAdic = infNFe.find('ns:infAdic', ns)
@@ -117,6 +118,7 @@ def processar_nfe_por_item(caminho_xml, ns):
                 'Data': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
                 'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
                 'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
+                'CNPJ Destinatário': cnpj_destinatario,
                 'CFOP': prod.findtext('ns:CFOP', default='', namespaces=ns),
                 'Codigo Produto': prod.findtext('ns:cProd', default='', namespaces=ns),
                 'Desc': prod.findtext('ns:xProd', default='', namespaces=ns),
@@ -161,6 +163,9 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
         itens = infNFe.findall('ns:det', ns)
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
         infAdic = infNFe.find('ns:infAdic', ns)
+        dest = infNFe.find('ns:dest', ns) or infNFe.find('ns:destinatario', ns)
+        cnpj_destinatario = dest.findtext('ns:CNPJ', default='', namespaces=ns) if dest is not None else ''
+
 
         dados_por_cfop = {}
         for item in itens:
@@ -212,6 +217,7 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
                     'Data': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
                     'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
                     'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
+                    'CNPJ Destinatário': cnpj_destinatario,
                     'CFOP': cfop,
                     'Codigo Produto': '',  # Não aplicável no cabeçalho
                     'Desc': '',  # Não aplicável no cabeçalho
