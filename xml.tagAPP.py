@@ -1,4 +1,3 @@
-adicionar cnpj remetente . enviar codigo completo 
 import os
 import zipfile
 import tempfile
