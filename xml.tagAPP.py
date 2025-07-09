@@ -116,65 +116,98 @@ def processar_nfe_por_item(caminho_xml, ns):
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
 
-def criar_excel(df):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
-        df.to_excel(tmp.name, index=False, engine='openpyxl')
-        with open(tmp.name, 'rb') as f:
-            data = f.read()
-        os.unlink(tmp.name)
-    return data
+def processar_nfe_por_cabecalho(caminho_xml, ns):
+    try:
+        tree = ET.parse(caminho_xml)
+        root = tree.getroot()
+        infNFe = root.find('.//ns:infNFe', ns)
+        if infNFe is None:
+            return []
 
-def main():
-    st.title("Conversor XML para Excel")
-    st.caption("Desenvolvido por Patricia Gutierrez")
+        ide = infNFe.find('ns:ide', ns)
+        emit = infNFe.find('ns:emit', ns)
+        itens = infNFe.findall('ns:det', ns)
+        total = infNFe.find('ns:total/ns:ICMSTot', ns)
+        infAdic = infNFe.find('ns:infAdic', ns)
+        transp = infNFe.find('ns:transp', ns)
 
-    tipo_doc = st.radio("Selecione o tipo de documento:", ["NFe", "CTe"], horizontal=True)
-    layout = ""
-    if tipo_doc == "NFe":
-        layout = st.radio("Layout de saída:", ["Cabeçalho", "Por Item"], horizontal=True)
+        remetente = transp.find('ns:rem', ns) if transp is not None else None
+        cnpj_remetente = remetente.findtext('ns:CNPJ', default='', namespaces=ns) if remetente is not None else ''
 
-    uploaded_file = st.file_uploader("Selecione o arquivo ZIP com os XMLs", type="zip")
+        dados_por_cfop = {}
+        for item in itens:
+            prod = item.find('ns:prod', ns)
+            imposto = item.find('ns:imposto', ns)
+            icms = imposto.find('.//ns:ICMS', ns) if imposto is not None else None
+            cfop = prod.findtext('ns:CFOP', default='', namespaces=ns)
 
-    if uploaded_file:
-        with st.spinner("Processando arquivos..."):
-            with tempfile.TemporaryDirectory() as temp_dir:
-                zip_path = os.path.join(temp_dir, uploaded_file.name)
-                with open(zip_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+            vBC = 0.0
+            pICMS = '0'
+            vICMS = 0.0
+            vBCST = 0.0
+            pST = '0'
+            vST = 0.0
 
-                xml_files = extrair_xmls_de_zip(zip_path, temp_dir)
+            if icms is not None:
+                for child in icms:
+                    vBC_item = child.findtext('ns:vBC', default='0', namespaces=ns)
+                    pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
+                    vICMS_item = child.findtext('ns:vICMS', default='0', namespaces=ns)
+                    if vBC_item:
+                        vBC += float(vBC_item.replace(',', '.'))
+                    if pICMS_item:
+                        pICMS = pICMS_item
+                    if vICMS_item:
+                        vICMS += float(vICMS_item.replace(',', '.'))
+                    vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
+                    pST_item = child.findtext('ns:pST', namespaces=ns)
+                    vST_item = child.findtext('ns:vST', namespaces=ns)
+                    if vBCST_item:
+                        vBCST += float(vBCST_item.replace(',', '.'))
+                    if pST_item:
+                        pST = pST_item
+                    if vST_item:
+                        vST += float(vST_item.replace(',', '.'))
 
-                if not xml_files:
-                    st.warning("Nenhum arquivo XML encontrado no ZIP.")
-                else:
-                    st.info(f"{len(xml_files)} arquivo(s) encontrado(s)")
-                    progress_bar = st.progress(0)
-                    dados_totais = []
+            if cfop not in dados_por_cfop:
+                dados_por_cfop[cfop] = {
+                    'Chave': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
+                    'Numero NF': ide.findtext('ns:nNF', default='', namespaces=ns),
+                    'Serie': ide.findtext('ns:serie', default='', namespaces=ns),
+                    'Data': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
+                    'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
+                    'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
+                    'Remetente CNPJ': cnpj_remetente,
+                    'CFOP': cfop,
+                    'Codigo Produto': '',
+                    'Desc': '',
+                    'NCM': '',
+                    'Obs Item': '',
+                    'Qtd': '0,00',
+                    'unidade': '',
+                    'Vlr Unit': '0,00',
+                    'Vlr total': '0,00',
+                    'Base ICMS': '0,00',
+                    'Aliquota': pICMS,
+                    'Vlr ICMS': '0,00',
+                    'Base ICMS ST': '0,00',
+                    'Vlr ICMS ST': '0,00',
+                    'Vlr PIS': formatar_valor(total.findtext('ns:vPIS', default='0', namespaces=ns)),
+                    'Vlr COFINS': formatar_valor(total.findtext('ns:vCOFINS', default='0', namespaces=ns)),
+                    'Vlr Frete': formatar_valor(total.findtext('ns:vFrete', default='0', namespaces=ns)),
+                    'Vlr Seguro': formatar_valor(total.findtext('ns:vSeg', default='0', namespaces=ns)),
+                    'Vlr Desconto': formatar_valor(total.findtext('ns:vDesc', default='0', namespaces=ns)),
+                    'Obs NFe': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
+                }
 
-                    for i, xml_file in enumerate(xml_files):
-                        progress_bar.progress((i + 1) / len(xml_files))
-                        if tipo_doc == "NFe":
-                            ns = {'ns': 'http://www.portalfiscal.inf.br/nfe'}
-                            if layout == "Cabeçalho":
-                                continue  # ainda não adaptado
-                            else:
-                                dados_totais.extend(processar_nfe_por_item(xml_file, ns))
-                        else:
-                            continue  # ainda não adaptado para CTe
+            dados_por_cfop[cfop]['Vlr total'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.')) + float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.'))))
+            dados_por_cfop[cfop]['Base ICMS'] = formatar_valor(str(float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.')) + vBC))
+            dados_por_cfop[cfop]['Vlr ICMS'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr ICMS'].replace(',', '.')) + vICMS))
+            dados_por_cfop[cfop]['Base ICMS ST'] = formatar_valor(str(float(dados_por_cfop[cfop]['Base ICMS ST'].replace(',', '.')) + vBCST))
+            dados_por_cfop[cfop]['Vlr ICMS ST'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr ICMS ST'].replace(',', '.')) + vST))
 
-                    if dados_totais:
-                        colunas_ordenadas = [
-                            'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente', 'Remetente CNPJ',
-                            'CFOP', 'Codigo Produto', 'Desc', 'NCM', 'Obs Item', 'Qtd', 'unidade', 'Vlr Unit',
-                            'Vlr total', 'Base ICMS', 'Aliquota', 'Vlr ICMS', 'Base ICMS ST', 'Vlr ICMS ST',
-                            'Vlr PIS', 'Vlr COFINS', 'Vlr Frete', 'Vlr Seguro', 'Vlr Desconto', 'Obs NFe']
+        return list(dados_por_cfop.values())
 
-                        df = pd.DataFrame(dados_totais)
-                        df = df.reindex(columns=colunas_ordenadas).fillna('')
-                        st.dataframe(df)
-                        excel_data = criar_excel(df)
-                        nome_arquivo = f"{tipo_doc}_{layout.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                        st.download_button("Baixar Excel", data=excel_data, file_name=nome_arquivo, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-if __name__ == "__main__":
-    main()
+    except Exception as e:
+        st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
+        return []
