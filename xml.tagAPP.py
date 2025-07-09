@@ -8,7 +8,7 @@ from datetime import datetime
 
 # --- Configuração da Página ---
 st.set_page_config(
-    page_title="Conversor XML para Excel",
+    page_title="Conversor XML para EXCEL",
     layout="wide",
     page_icon="📄"
 )
@@ -74,31 +74,29 @@ def processar_nfe_por_item(caminho_xml, ns):
 
                 if icms is not None:
                     for child in icms:
-                      if icms is not None:
-    for child in icms:
-        # Normal
-        vBC_item = child.findtext('ns:vBC', namespaces=ns)
-        pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
-        vICMS_item = child.findtext('ns:vICMS', namespaces=ns)
+                        # Normal
+                        vBC_item = child.findtext('ns:vBC', namespaces=ns)
+                        pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
+                        vICMS_item = child.findtext('ns:vICMS', namespaces=ns)
 
-        if vBC_item:
-            vBC = vBC_item
-        if pICMS_item:
-            pICMS = pICMS_item
-        if vICMS_item:
-            vICMS = vICMS_item
+                        if vBC_item:
+                            vBC = vBC_item
+                        if pICMS_item:
+                            pICMS = pICMS_item
+                        if vICMS_item:
+                            vICMS = vICMS_item
 
-        # ST (presente em ICMS10, ICMS30, ICMS70, ICMS60 etc.)
-        vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
-        pST_item = child.findtext('ns:pST', namespaces=ns)
-        vST_item = child.findtext('ns:vST', namespaces=ns)
+                        # ST (presente em ICMS10, ICMS30, ICMS70, ICMS60 etc.)
+                        vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
+                        pST_item = child.findtext('ns:pST', namespaces=ns)
+                        vST_item = child.findtext('ns:vST', namespaces=ns)
 
-        if vBCST_item:
-            vBCST = vBCST_item
-        if pST_item:
-            pST = pST_item
-        if vST_item:
-            vST = vST_item
+                        if vBCST_item:
+                            vBCST = vBCST_item
+                        if pST_item:
+                            pST = pST_item
+                        if vST_item:
+                            vST = vST_item
 
                 # PIS e COFINS
                 if pis is not None:
@@ -177,7 +175,6 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
         dest = infNFe.find('ns:dest', ns) or infNFe.find('ns:destinatario', ns)
         cnpj_destinatario = dest.findtext('ns:CNPJ', default='', namespaces=ns) if dest is not None else ''
 
-
         dados_por_cfop = {}
         for item in itens:
             prod = item.find('ns:prod', ns)
@@ -252,8 +249,8 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
                 }
 
             # Atualiza valores acumulados
-            dados_por_cfop[cfop]['Vlr total'] = str(float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.')) + float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.')))
-            dados_por_cfop[cfop]['Base ICMS'] = str(float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.')) + vBC)
+            dados_por_cfop[cfop]['Vlr total'] = str(float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.')) + float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.'))
+            dados_por_cfop[cfop]['Base ICMS'] = str(float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.')) + vBC
             dados_por_cfop[cfop]['Vlr ICMS'] = str(float(dados_por_cfop[cfop]['Vlr ICMS'].replace(',', '.')) + vICMS)
             dados_por_cfop[cfop]['Base ICMS ST'] = str(float(dados_por_cfop[cfop]['Base ICMS ST'].replace(',', '.')) + vBCST)
             dados_por_cfop[cfop]['Vlr ICMS ST'] = str(float(dados_por_cfop[cfop]['Vlr ICMS ST'].replace(',', '.')) + vST)
@@ -293,7 +290,7 @@ def processar_cte(caminho_xml, ns):
             'Data': (infCte.findtext('ns:ide/ns:dhEmi', namespaces=ns) or '')[:10],
             'Emitente': infCte.findtext('ns:emit/ns:xNome', namespaces=ns) or '',
             'CNPJ Emitente': infCte.findtext('ns:emit/ns:CNPJ', namespaces=ns) or '',
-            'CNPJ Destinatário': cnpj_destinatario, # Changed to CNPJ Destinatário for CTe
+            'CNPJ Destinatário': cnpj_destinatario,
             'CFOP': infCte.findtext('ns:ide/ns:CFOP', namespaces=ns) or '',
             'Codigo Produto': '',
             'Desc': '',
@@ -378,7 +375,6 @@ def main():
                     
                     if dados_totais:
                         # Definir a ordem das colunas
-                        # Updated to 'CNPJ Destinatário'
                         colunas_ordenadas = [
                             'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente', 'CNPJ Destinatário',
                             'CFOP', 'Codigo Produto', 'Desc', 'NCM', 'Obs Item', 'Qtd', 'unidade',
