@@ -249,11 +249,21 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
                 }
 
             # Atualiza valores acumulados
-            dados_por_cfop[cfop]['Vlr total'] = str(float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.')) + float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.'))
-            dados_por_cfop[cfop]['Base ICMS'] = str(float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.')) + vBC
-            dados_por_cfop[cfop]['Vlr ICMS'] = str(float(dados_por_cfop[cfop]['Vlr ICMS'].replace(',', '.')) + vICMS)
-            dados_por_cfop[cfop]['Base ICMS ST'] = str(float(dados_por_cfop[cfop]['Base ICMS ST'].replace(',', '.')) + vBCST)
-            dados_por_cfop[cfop]['Vlr ICMS ST'] = str(float(dados_por_cfop[cfop]['Vlr ICMS ST'].replace(',', '.')) + vST)
+            vlr_total_atual = float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.'))
+            vlr_prod = float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.'))
+            dados_por_cfop[cfop]['Vlr total'] = str(vlr_total_atual + vlr_prod)
+            
+            base_icms_atual = float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.'))
+            dados_por_cfop[cfop]['Base ICMS'] = str(base_icms_atual + vBC)
+            
+            vlr_icms_atual = float(dados_por_cfop[cfop]['Vlr ICMS'].replace(',', '.'))
+            dados_por_cfop[cfop]['Vlr ICMS'] = str(vlr_icms_atual + vICMS)
+            
+            base_icms_st_atual = float(dados_por_cfop[cfop]['Base ICMS ST'].replace(',', '.'))
+            dados_por_cfop[cfop]['Base ICMS ST'] = str(base_icms_st_atual + vBCST)
+            
+            vlr_icms_st_atual = float(dados_por_cfop[cfop]['Vlr ICMS ST'].replace(',', '.'))
+            dados_por_cfop[cfop]['Vlr ICMS ST'] = str(vlr_icms_st_atual + vST)
 
         # Formata os valores acumulados
         for cfop_dado in dados_por_cfop.values():
@@ -269,7 +279,6 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
     except Exception as e:
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
-
 # --- Processamento CTe ---
 def processar_cte(caminho_xml, ns):
     try:
