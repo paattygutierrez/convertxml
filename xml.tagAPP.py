@@ -74,20 +74,31 @@ def processar_nfe_por_item(caminho_xml, ns):
 
                 if icms is not None:
                     for child in icms:
-                        # ICMS normal
-                        if child.tag.endswith('ICMS00') or child.tag.endswith('ICMS20'):
-                            vBC = child.findtext('ns:vBC', default='0', namespaces=ns)
-                            pICMS = child.findtext('ns:pICMS', default='0', namespaces=ns)
-                            vICMS = child.findtext('ns:vICMS', default='0', namespaces=ns)
-                        
-                        # ICMS ST
-                        vBCST_item = child.findtext('ns:vBCST', default='0', namespaces=ns)
-                        pST_item = child.findtext('ns:pST', default='0', namespaces=ns)
-                        vST_item = child.findtext('ns:vST', default='0', namespaces=ns)
-                        
-                        vBCST = vBCST_item if vBCST_item else vBCST
-                        pST = pST_item if pST_item else pST
-                        vST = vST_item if vST_item else vST
+                      if icms is not None:
+    for child in icms:
+        # Normal
+        vBC_item = child.findtext('ns:vBC', namespaces=ns)
+        pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
+        vICMS_item = child.findtext('ns:vICMS', namespaces=ns)
+
+        if vBC_item:
+            vBC = vBC_item
+        if pICMS_item:
+            pICMS = pICMS_item
+        if vICMS_item:
+            vICMS = vICMS_item
+
+        # ST (presente em ICMS10, ICMS30, ICMS70, ICMS60 etc.)
+        vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
+        pST_item = child.findtext('ns:pST', namespaces=ns)
+        vST_item = child.findtext('ns:vST', namespaces=ns)
+
+        if vBCST_item:
+            vBCST = vBCST_item
+        if pST_item:
+            pST = pST_item
+        if vST_item:
+            vST = vST_item
 
                 # PIS e COFINS
                 if pis is not None:
