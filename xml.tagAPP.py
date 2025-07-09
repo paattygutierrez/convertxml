@@ -26,7 +26,6 @@ def formatar_valor(val):
         return '0,00'
     return str(val).replace('.', ',')
 
-# --- Processamento NFe Por Item ---
 def processar_nfe_por_item(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
@@ -42,9 +41,7 @@ def processar_nfe_por_item(caminho_xml, ns):
         itens = infNFe.findall('ns:det', ns)
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
         infAdic = infNFe.find('ns:infAdic', ns)
-        transp = infNFe.find('ns:transp', ns)
 
-        # Valores totais da nota para observações
         obs_nfe = infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
 
         dados_itens = []
@@ -73,30 +70,17 @@ def processar_nfe_por_item(caminho_xml, ns):
                 cofins = imposto.find('.//ns:COFINS', ns)
 
                 if icms is not None:
-                    for child in icms:
-                        # Normal
-                        vBC_item = child.findtext('ns:vBC', namespaces=ns)
-                        pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
-                        vICMS_item = child.findtext('ns:vICMS', namespaces=ns)
-
-                        if vBC_item:
-                            vBC = vBC_item
-                        if pICMS_item:
-                            pICMS = pICMS_item
-                        if vICMS_item:
-                            vICMS = vICMS_item
-
-                        # ST (presente em ICMS10, ICMS30, ICMS70, ICMS60 etc.)
-                        vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
-                        pST_item = child.findtext('ns:pST', namespaces=ns)
-                        vST_item = child.findtext('ns:vST', namespaces=ns)
-
-                        if vBCST_item:
-                            vBCST = vBCST_item
-                        if pST_item:
-                            pST = pST_item
-                        if vST_item:
-                            vST = vST_item
+                    # Verifica todos os tipos possíveis de ICMS
+                    for tipo_icms in icms:
+                        # ICMS Normal
+                        vBC = tipo_icms.findtext('ns:vBC', default=vBC, namespaces=ns)
+                        pICMS = tipo_icms.findtext('ns:pICMS', default=pICMS, namespaces=ns)
+                        vICMS = tipo_icms.findtext('ns:vICMS', default=vICMS, namespaces=ns)
+                        
+                        # ICMS ST (pode estar em vários tipos de ICMS)
+                        vBCST = tipo_icms.findtext('ns:vBCST', default=vBCST, namespaces=ns)
+                        pST = tipo_icms.findtext('ns:pICMSST', default=pST, namespaces=ns)
+                        vST = tipo_icms.findtext('ns:vICMSST', default=vST, namespaces=ns)
 
                 # PIS e COFINS
                 if pis is not None:
@@ -109,6 +93,12 @@ def processar_nfe_por_item(caminho_xml, ns):
                     if cofins_item is not None:
                         vCOFINS = cofins_item.findtext('ns:vCOFINS', default='0', namespaces=ns)
 
+            # Se não encontrou valores no item, tenta pegar do total
+            if vBCST == '0':
+                vBCST = total.findtext('ns:vBCST', default='0', namespaces=ns)
+            if vST == '0':
+                vST = total.findtext('ns:vST', default='0', namespaces=ns)
+
             # Frete, Seguro e Desconto (pega do item ou do total)
             vFrete_item = prod.findtext('ns:vFrete', default='0', namespaces=ns)
             vFrete = vFrete_item if vFrete_item != '0' else total.findtext('ns:vFrete', default='0', namespaces=ns)
@@ -119,7 +109,7 @@ def processar_nfe_por_item(caminho_xml, ns):
             vDesc_item = prod.findtext('ns:vDesc', default='0', namespaces=ns)
             vDesc = vDesc_item if vDesc_item != '0' else total.findtext('ns:vDesc', default='0', namespaces=ns)
 
-            # Dados do item na ordem solicitada
+            # Dados do item
             dados = {
                 'Chave': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
                 'Numero NF': ide.findtext('ns:nNF', default='', namespaces=ns),
@@ -157,7 +147,6 @@ def processar_nfe_por_item(caminho_xml, ns):
     except Exception as e:
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
-
 # --- Processamento NFe Cabeçalho ---
 def processar_nfe_por_cabecalho(caminho_xml, ns):
     try:
