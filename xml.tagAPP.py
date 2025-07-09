@@ -265,9 +265,9 @@ def processar_cte(caminho_xml, ns):
         if infCte is None:
             return []
 
-        # Find the rem (Remetente) tag
-        rem = infCte.find('ns:rem', ns)
-        cnpj_remetente = rem.findtext('ns:CNPJ', namespaces=ns) if rem is not None else ''
+        # Find the dest (Destinatário) tag
+        dest = infCte.find('ns:dest', ns)
+        cnpj_destinatario = dest.findtext('ns:CNPJ', namespaces=ns) if dest is not None else ''
 
         dados = {
             'Chave': infCte.get('Id')[3:] if infCte.get('Id') else '',
@@ -276,7 +276,7 @@ def processar_cte(caminho_xml, ns):
             'Data': (infCte.findtext('ns:ide/ns:dhEmi', namespaces=ns) or '')[:10],
             'Emitente': infCte.findtext('ns:emit/ns:xNome', namespaces=ns) or '',
             'CNPJ Emitente': infCte.findtext('ns:emit/ns:CNPJ', namespaces=ns) or '',
-            'CNPJ Remetente': cnpj_remetente, # Added CNPJ Remetente for CTe
+            'CNPJ Destinatário': cnpj_destinatario, # Changed to CNPJ Destinatário for CTe
             'CFOP': infCte.findtext('ns:ide/ns:CFOP', namespaces=ns) or '',
             'Codigo Produto': '',
             'Desc': '',
@@ -361,9 +361,9 @@ def main():
                     
                     if dados_totais:
                         # Definir a ordem das colunas
-                        # Added 'CNPJ Remetente' to the ordered columns
+                        # Updated to 'CNPJ Destinatário'
                         colunas_ordenadas = [
-                            'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente', 'CNPJ Remetente',
+                            'Chave', 'Numero NF', 'Serie', 'Data', 'Emitente', 'CNPJ Emitente', 'CNPJ Destinatário',
                             'CFOP', 'Codigo Produto', 'Desc', 'NCM', 'Obs Item', 'Qtd', 'unidade',
                             'Vlr Unit', 'Vlr total', 'Base ICMS', 'Aliquota', 'Vlr ICMS',
                             'Base ICMS ST', 'Vlr ICMS ST', 'Vlr PIS', 'Vlr COFINS', 'Vlr Frete',
