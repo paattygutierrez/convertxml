@@ -6,7 +6,16 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 
-st.set_page_config(page_title="Conversor XML para Excel", layout="wide", page_icon="📄")
+st.set_page_config(page_title="Conversor XML para Excel2", layout="wide", page_icon="📄")
+
+st.markdown("""
+    <style>
+        html, body, [class*="css"] {
+            background-color: white !important;
+            color: black !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 def extrair_xmls_de_zip(zip_path, destino):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -22,6 +31,14 @@ def formatar_valor(val):
 
 def obter_cnpj_remetente(infNFe, ns):
     transp = infNFe.find('ns:transp', ns)
+    if transp is not None:
+        remetente = transp.find('ns:rem', ns)
+        if remetente is not None:
+            return remetente.findtext('ns:CNPJ', default='', namespaces=ns)
+    return ''
+
+def obter_cnpj_remetente_por_root(root, ns):
+    transp = root.find('.//ns:transp', ns)
     if transp is not None:
         remetente = transp.find('ns:rem', ns)
         if remetente is not None:
@@ -92,7 +109,7 @@ def processar_nfe_por_item(caminho_xml, ns):
                 'Data': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
                 'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
                 'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
-                'Remetente CNPJ': cnpj_remetente,
+                'CNPJ Remetente': cnpj_remetente,
                 'CFOP': prod.findtext('ns:CFOP', default='', namespaces=ns),
                 'Codigo Produto': prod.findtext('ns:cProd', default='', namespaces=ns),
                 'Desc': prod.findtext('ns:xProd', default='', namespaces=ns),
