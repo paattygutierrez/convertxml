@@ -20,6 +20,14 @@ def formatar_valor(val):
         return '0,00'
     return str(val).replace('.', ',')
 
+def obter_cnpj_remetente(infNFe, ns):
+    transp = infNFe.find('ns:transp', ns)
+    if transp is not None:
+        remetente = transp.find('ns:rem', ns)
+        if remetente is not None:
+            return remetente.findtext('ns:CNPJ', default='', namespaces=ns)
+    return ''
+
 def processar_nfe_por_item(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
@@ -33,10 +41,8 @@ def processar_nfe_por_item(caminho_xml, ns):
         itens = infNFe.findall('ns:det', ns)
         total = infNFe.find('ns:total/ns:ICMSTot', ns)
         infAdic = infNFe.find('ns:infAdic', ns)
-        transp = infNFe.find('ns:transp', ns)
 
-        remetente = transp.find('ns:rem', ns) if transp is not None else None
-        cnpj_remetente = remetente.findtext('ns:CNPJ', default='', namespaces=ns) if remetente is not None else ''
+        cnpj_remetente = obter_cnpj_remetente(infNFe, ns)
         obs_nfe = infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
 
         dados_itens = []
@@ -111,102 +117,6 @@ def processar_nfe_por_item(caminho_xml, ns):
             dados_itens.append(dados)
 
         return dados_itens
-
-    except Exception as e:
-        st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
-        return []
-
-def processar_nfe_por_cabecalho(caminho_xml, ns):
-    try:
-        tree = ET.parse(caminho_xml)
-        root = tree.getroot()
-        infNFe = root.find('.//ns:infNFe', ns)
-        if infNFe is None:
-            return []
-
-        ide = infNFe.find('ns:ide', ns)
-        emit = infNFe.find('ns:emit', ns)
-        itens = infNFe.findall('ns:det', ns)
-        total = infNFe.find('ns:total/ns:ICMSTot', ns)
-        infAdic = infNFe.find('ns:infAdic', ns)
-        transp = infNFe.find('ns:transp', ns)
-
-        remetente = transp.find('ns:rem', ns) if transp is not None else None
-        cnpj_remetente = remetente.findtext('ns:CNPJ', default='', namespaces=ns) if remetente is not None else ''
-
-        dados_por_cfop = {}
-        for item in itens:
-            prod = item.find('ns:prod', ns)
-            imposto = item.find('ns:imposto', ns)
-            icms = imposto.find('.//ns:ICMS', ns) if imposto is not None else None
-            cfop = prod.findtext('ns:CFOP', default='', namespaces=ns)
-
-            vBC = 0.0
-            pICMS = '0'
-            vICMS = 0.0
-            vBCST = 0.0
-            pST = '0'
-            vST = 0.0
-
-            if icms is not None:
-                for child in icms:
-                    vBC_item = child.findtext('ns:vBC', default='0', namespaces=ns)
-                    pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
-                    vICMS_item = child.findtext('ns:vICMS', default='0', namespaces=ns)
-                    if vBC_item:
-                        vBC += float(vBC_item.replace(',', '.'))
-                    if pICMS_item:
-                        pICMS = pICMS_item
-                    if vICMS_item:
-                        vICMS += float(vICMS_item.replace(',', '.'))
-                    vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
-                    pST_item = child.findtext('ns:pST', namespaces=ns)
-                    vST_item = child.findtext('ns:vST', namespaces=ns)
-                    if vBCST_item:
-                        vBCST += float(vBCST_item.replace(',', '.'))
-                    if pST_item:
-                        pST = pST_item
-                    if vST_item:
-                        vST += float(vST_item.replace(',', '.'))
-
-            if cfop not in dados_por_cfop:
-                dados_por_cfop[cfop] = {
-                    'Chave': infNFe.get('Id')[3:] if infNFe.get('Id') else '',
-                    'Numero NF': ide.findtext('ns:nNF', default='', namespaces=ns),
-                    'Serie': ide.findtext('ns:serie', default='', namespaces=ns),
-                    'Data': ide.findtext('ns:dhEmi', default='', namespaces=ns)[:10],
-                    'Emitente': emit.findtext('ns:xNome', default='', namespaces=ns),
-                    'CNPJ Emitente': emit.findtext('ns:CNPJ', default='', namespaces=ns),
-                    'Remetente CNPJ': cnpj_remetente,
-                    'CFOP': cfop,
-                    'Codigo Produto': '',
-                    'Desc': '',
-                    'NCM': '',
-                    'Obs Item': '',
-                    'Qtd': '0,00',
-                    'unidade': '',
-                    'Vlr Unit': '0,00',
-                    'Vlr total': '0,00',
-                    'Base ICMS': '0,00',
-                    'Aliquota': pICMS,
-                    'Vlr ICMS': '0,00',
-                    'Base ICMS ST': '0,00',
-                    'Vlr ICMS ST': '0,00',
-                    'Vlr PIS': formatar_valor(total.findtext('ns:vPIS', default='0', namespaces=ns)),
-                    'Vlr COFINS': formatar_valor(total.findtext('ns:vCOFINS', default='0', namespaces=ns)),
-                    'Vlr Frete': formatar_valor(total.findtext('ns:vFrete', default='0', namespaces=ns)),
-                    'Vlr Seguro': formatar_valor(total.findtext('ns:vSeg', default='0', namespaces=ns)),
-                    'Vlr Desconto': formatar_valor(total.findtext('ns:vDesc', default='0', namespaces=ns)),
-                    'Obs NFe': infAdic.findtext('ns:infCpl', default='', namespaces=ns) if infAdic is not None else ''
-                }
-
-            dados_por_cfop[cfop]['Vlr total'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr total'].replace(',', '.')) + float(prod.findtext('ns:vProd', default='0', namespaces=ns).replace(',', '.'))))
-            dados_por_cfop[cfop]['Base ICMS'] = formatar_valor(str(float(dados_por_cfop[cfop]['Base ICMS'].replace(',', '.')) + vBC))
-            dados_por_cfop[cfop]['Vlr ICMS'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr ICMS'].replace(',', '.')) + vICMS))
-            dados_por_cfop[cfop]['Base ICMS ST'] = formatar_valor(str(float(dados_por_cfop[cfop]['Base ICMS ST'].replace(',', '.')) + vBCST))
-            dados_por_cfop[cfop]['Vlr ICMS ST'] = formatar_valor(str(float(dados_por_cfop[cfop]['Vlr ICMS ST'].replace(',', '.')) + vST))
-
-        return list(dados_por_cfop.values())
 
     except Exception as e:
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
