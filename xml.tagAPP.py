@@ -65,10 +65,7 @@ def processar_nfe_por_item(caminho_xml, ns):
             
             # Processa impostos
             if imposto is not None:
-                icms = imposto.find('.//ns:ICMS', ns)
-                pis = imposto.find('.//ns:PIS', ns)
-                cofins = imposto.find('.//ns:COFINS', ns)
-
+                icms = imposto.find('ns:ICMS', ns)
                 if icms is not None:
                     # Verifica todos os tipos possíveis de ICMS
                     for tipo_icms in icms:
@@ -83,13 +80,15 @@ def processar_nfe_por_item(caminho_xml, ns):
                         vST = tipo_icms.findtext('ns:vICMSST', default=vST, namespaces=ns)
 
                 # PIS e COFINS
+                pis = imposto.find('ns:PIS', ns)
                 if pis is not None:
-                    pis_item = pis.find('.//ns:PISAliq', ns) or pis.find('.//ns:PISOutr', ns)
+                    pis_item = pis.find('.//ns:PISAliq', ns) or pis.find('.//ns:PISOutr', ns) or pis.find('.//ns:PISNT', ns)
                     if pis_item is not None:
                         vPIS = pis_item.findtext('ns:vPIS', default='0', namespaces=ns)
 
+                cofins = imposto.find('ns:COFINS', ns)
                 if cofins is not None:
-                    cofins_item = cofins.find('.//ns:COFINSAliq', ns) or cofins.find('.//ns:COFINSOutr', ns)
+                    cofins_item = cofins.find('.//ns:COFINSAliq', ns) or cofins.find('.//ns:COFINSOutr', ns) or cofins.find('.//ns:COFINSNT', ns)
                     if cofins_item is not None:
                         vCOFINS = cofins_item.findtext('ns:vCOFINS', default='0', namespaces=ns)
 
@@ -168,7 +167,7 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
         for item in itens:
             prod = item.find('ns:prod', ns)
             imposto = item.find('ns:imposto', ns)
-            icms = imposto.find('.//ns:ICMS', ns) if imposto is not None else None
+            icms = imposto.find('ns:ICMS', ns) if imposto is not None else None
 
             cfop = prod.findtext('ns:CFOP', default='', namespaces=ns)
             
@@ -181,11 +180,11 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
             vST = 0.0
             
             if icms is not None:
-                for child in icms:
+                for tipo_icms in icms:
                     # ICMS normal
-                    vBC_item = child.findtext('ns:vBC', default='0', namespaces=ns)
-                    pICMS_item = child.findtext('ns:pICMS', namespaces=ns)
-                    vICMS_item = child.findtext('ns:vICMS', default='0', namespaces=ns)
+                    vBC_item = tipo_icms.findtext('ns:vBC', default='0', namespaces=ns)
+                    pICMS_item = tipo_icms.findtext('ns:pICMS', namespaces=ns)
+                    vICMS_item = tipo_icms.findtext('ns:vICMS', default='0', namespaces=ns)
                     
                     if vBC_item:
                         vBC += float(vBC_item.replace(',', '.'))
@@ -195,9 +194,9 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
                         vICMS += float(vICMS_item.replace(',', '.'))
                     
                     # ICMS ST
-                    vBCST_item = child.findtext('ns:vBCST', namespaces=ns)
-                    pST_item = child.findtext('ns:pST', namespaces=ns)
-                    vST_item = child.findtext('ns:vST', namespaces=ns)
+                    vBCST_item = tipo_icms.findtext('ns:vBCST', namespaces=ns)
+                    pST_item = tipo_icms.findtext('ns:pICMSST', namespaces=ns)
+                    vST_item = tipo_icms.findtext('ns:vICMSST', namespaces=ns)
                     
                     if vBCST_item:
                         vBCST += float(vBCST_item.replace(',', '.'))
