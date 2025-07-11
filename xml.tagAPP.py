@@ -147,7 +147,7 @@ def processar_nfe_por_item(caminho_xml, ns):
     except Exception as e:
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
-# --- Processamento NFe Cabeçalho ---
+
 def processar_nfe_por_cabecalho(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
@@ -268,7 +268,7 @@ def processar_nfe_por_cabecalho(caminho_xml, ns):
     except Exception as e:
         st.error(f"Erro ao processar NFe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
-# --- Processamento CTe ---
+
 def processar_cte(caminho_xml, ns):
     try:
         tree = ET.parse(caminho_xml)
@@ -315,6 +315,14 @@ def processar_cte(caminho_xml, ns):
     except Exception as e:
         st.error(f"Erro ao processar CTe {os.path.basename(caminho_xml)}: {str(e)}")
         return []
+
+def criar_excel(df):
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+        df.to_excel(tmp.name, index=False, engine='openpyxl')
+        with open(tmp.name, 'rb') as f:
+            data = f.read()
+        os.unlink(tmp.name)
+    return data
 
 # --- Interface Principal ---
 def main():
@@ -386,9 +394,68 @@ def main():
                         # Reordenar as colunas e preencher valores faltantes
                         df = df.reindex(columns=colunas_ordenadas).fillna('')
                         
-                        st.dataframe(df)
+                        # Aplicar filtros apenas para NFe
+                        if tipo_doc == "NFe":
+                            st.subheader("Filtros")
+                            
+                            # Converter a coluna Data para datetime
+                            df['Data'] = pd.to_datetime(df['Data'], errors='coerce')
+                            
+                            # Criar colunas para os filtros
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                # Filtro de CFOP
+                                cfops_disponiveis = sorted(df['CFOP'].unique())
+                                cfops_selecionados = st.multiselect(
+                                    "Selecione CFOP(s)",
+                                    options=cfops_disponiveis,
+                                    default=cfops_disponiveis
+                                )
+                            
+                            with col2:
+                                # Filtro de data
+                                datas_validas = df[pd.notna(df['Data'])]
+                                if not datas_validas.empty:
+                                    data_min = datas_validas['Data'].min()
+                                    data_max = datas_validas['Data'].max()
+                                    
+                                    datas_selecionadas = st.date_input(
+                                        "Selecione o intervalo de datas",
+                                        value=[data_min.to_pydatetime().date(), data_max.to_pydatetime().date()],
+                                        min_value=data_min.to_pydatetime().date(),
+                                        max_value=data_max.to_pydatetime().date()
+                                    )
+                                    
+                                    if len(datas_selecionadas) == 2:
+                                        data_inicio = pd.to_datetime(datas_selecionadas[0])
+                                        data_fim = pd.to_datetime(datas_selecionadas[1])
+                                else:
+                                    st.warning("Nenhuma data válida encontrada nos XMLs")
+                            
+                            # Aplicar filtros
+                            df_filtrado = df.copy()
+                            
+                            # Filtro de CFOP
+                            if cfops_selecionados:
+                                df_filtrado = df_filtrado[df_filtrado['CFOP'].isin(cfops_selecionados)]
+                            
+                            # Filtro de data (apenas se as datas forem válidas)
+                            if 'data_inicio' in locals() and 'data_fim' in locals():
+                                df_filtrado = df_filtrado[
+                                    (df_filtrado['Data'] >= data_inicio) & 
+                                    (df_filtrado['Data'] <= data_fim)
+                                ]
+                            
+                            # Mostrar contagem de registros
+                            st.info(f"Total de registros: {len(df_filtrado)}")
+                            st.dataframe(df_filtrado)
+                            df_para_excel = df_filtrado
+                        else:
+                            st.dataframe(df)
+                            df_para_excel = df
                         
-                        excel_data = criar_excel(df)
+                        excel_data = criar_excel(df_para_excel)
                         
                         # Nome do arquivo condicional
                         if tipo_doc == "NFe":
@@ -402,14 +469,6 @@ def main():
                             file_name=nome_arquivo,
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-
-def criar_excel(df):
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
-        df.to_excel(tmp.name, index=False, engine='openpyxl')
-        with open(tmp.name, 'rb') as f:
-            data = f.read()
-        os.unlink(tmp.name)
-    return data
 
 if __name__ == "__main__":
     main()
