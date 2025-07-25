@@ -79,8 +79,11 @@ def processar_nfe_por_item(caminho_xml, ns):
             vFrete = '0'
             vSeg = '0'
             vDesc = '0'
-            cBenef = ''  # Nova coluna cBenef
+            
             vICMSDeson = '0' # Nova coluna ICMS Desonerado
+
+            # cBenef é um filho direto de 'prod'
+            cBenef = prod.findtext('ns:cBenef', default='', namespaces=ns) # Correção aqui
 
             # Processa impostos
             if imposto is not None:
@@ -107,11 +110,8 @@ def processar_nfe_por_item(caminho_xml, ns):
                         if pST_current != '0': pST = pST_current
                         if vST_current != '0': vST = vST_current
 
-                        # cBenef e ICMS Desonerado - NOVAS COLUNAS
-                        cBenef_current = tipo_icms.findtext('ns:cBenef', default='', namespaces=ns)
+                        # ICMS Desonerado
                         vICMSDeson_current = tipo_icms.findtext('ns:vICMSDeson', default='0', namespaces=ns)
-
-                        if cBenef_current: cBenef = cBenef_current
                         if vICMSDeson_current != '0': vICMSDeson = vICMSDeson_current
 
                 # PIS e COFINS
