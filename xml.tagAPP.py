@@ -5,6 +5,7 @@ import os
 import xml.etree.ElementTree as ET
 import tempfile
 from io import BytesIO
+from datetime import datetime
 
 # ================= FUNÇÕES DE EXTRAÇÃO =================
 
@@ -249,9 +250,31 @@ def main():
 
                     if dados_totais:
                         df = pd.DataFrame(dados_totais)
-                        st.dataframe(df)
+                        df['Data de Emissão'] = pd.to_datetime(df['Data de Emissão'], errors='coerce', utc=True).dt.date
+                        
+                        st.sidebar.header("Filtros")
+                        cfop_options = sorted(df['CFOP'].unique().tolist()) if 'CFOP' in df.columns else []
+                        selected_cfops = st.sidebar.multiselect("Filtrar por CFOP:", cfop_options)
 
-                        csv = df.to_csv(index=False).encode('utf-8-sig')
+                        min_date = df['Data de Emissão'].min() if not df['Data de Emissão'].empty and df['Data de Emissão'].min() is not pd.NaT else datetime.now().date()
+                        max_date = df['Data de Emissão'].max() if not df['Data de Emissão'].empty and df['Data de Emissão'].max() is not pd.NaT else datetime.now().date()
+
+                        start_date = st.sidebar.date_input('Data de início', min_date)
+                        end_date = st.sidebar.date_input('Data final', max_date)
+
+                        df_filtered = df.copy()
+
+                        if selected_cfops:
+                            df_filtered = df_filtered[df_filtered['CFOP'].isin(selected_cfops)]
+                        
+                        if 'Data de Emissão' in df_filtered.columns:
+                            df_filtered = df_filtered[(df_filtered['Data de Emissão'] >= start_date) & (df_filtered['Data de Emissão'] <= end_date)]
+
+                        st.subheader("Dados Extraídos")
+                        with st.expander("Ver tabela de dados", expanded=True):
+                            st.dataframe(df_filtered, use_container_width=True)
+
+                        csv = df_filtered.to_csv(index=False).encode('utf-8-sig')
                         st.download_button(
                             label="📥 Baixar Planilha Excel (CSV)",
                             data=csv,
