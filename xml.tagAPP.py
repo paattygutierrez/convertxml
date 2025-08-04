@@ -160,7 +160,7 @@ def processar_cte(xml_path, ns):
 # ================= INTERFACE STREAMLIT =================
 
 def main():
-    st.title("Conversor de XML de NFe e CTe (multi-ZIP)")
+    st.title("Conversor de XML de NFe e CTe")
 
     tipo_doc = st.radio("Tipo de Documento:", ["NFe", "CTe"])
     layout = st.radio("Layout de Exportação:", ["Item", "Cabeçalho"])
@@ -216,6 +216,9 @@ def main():
                         file_name="resultado.csv",
                         mime="text/csv"
                     )
+    st.markdown("---")
+    st.markdown("Desenvolvido por Patricia Gutierrez")
 
 if __name__ == "__main__":
     main()
+
