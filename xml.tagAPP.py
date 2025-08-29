@@ -203,7 +203,7 @@ def processar_cte(xml_path, ns):
 # DESIGN STREAMLIT
 
 def main():
-    st.title("Conversor de XML de NFe e CTe")
+    st.title("XML to EXCEL")
 
     tipo_doc = st.radio("Tipo de Documento:", ["NFe", "CTe"])
     layout = st.radio("Layout de Exportação:", ["Item", "Cabeçalho"])
@@ -289,4 +289,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
