@@ -7,7 +7,7 @@ import tempfile
 from io import BytesIO
 from datetime import datetime
 
-# ================= FUNÇÕES DE EXTRAÇÃO =================
+# Extrair
 
 def extrair_xmls_de_zip(zip_path, extract_path):
     """
@@ -30,7 +30,7 @@ def processar_nfe_por_item(xml_path, ns):
         tree = ET.parse(xml_path)
         root = tree.getroot()
 
-        # Verificação de elementos-chave para evitar erros
+        # Verificação de elementos-chave
         emit = root.find('.//ns:emit', ns)
         ide = root.find('.//ns:ide', ns)
         total = root.find('.//ns:total', ns)
@@ -200,7 +200,7 @@ def processar_cte(xml_path, ns):
         return []
 
 
-# ================= INTERFACE STREAMLIT =================
+# DESIGN STREAMLIT
 
 def main():
     st.title("Conversor de XML de NFe e CTe")
@@ -289,3 +289,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
