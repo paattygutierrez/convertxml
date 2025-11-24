@@ -37,7 +37,6 @@ def processar_nfe_por_item(xml_path, ns):
         det_list = root.findall('.//ns:det', ns)
 
         if emit is None or ide is None or total is None:
-            # Retorna uma lista vazia se os elementos principais não forem encontrados
             return []
 
         chave_acesso_tag = root.find('.//ns:infProt/ns:chNFe', ns)
@@ -51,6 +50,16 @@ def processar_nfe_por_item(xml_path, ns):
         uf_emitente = emit.find('ns:enderEmit/ns:UF', ns).text if emit.find('ns:enderEmit/ns:UF', ns) is not None else ""
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
+
+        # ---- Observações da Nota ----
+        infadic = root.find('.//ns:infAdic', ns)
+        observacoes = ""
+        if infadic is not None:
+            inf_cpl = infadic.find('ns:infCpl', ns)
+            inf_fisco = infadic.find('ns:infAdFisco', ns)
+            observacoes = (inf_cpl.text if inf_cpl is not None else "")
+            if inf_fisco is not None:
+                observacoes += (" | " + inf_fisco.text if inf_cpl is not None else inf_fisco.text)
 
         dados = []
         for det in det_list:
@@ -97,12 +106,13 @@ def processar_nfe_por_item(xml_path, ns):
                 "ICMS Desonerado": icms_desonerado.text if icms_desonerado is not None else "",
                 "CFOP": cfop.text if cfop is not None else "",
                 "CST ICMS": icms_cst.text if icms_cst is not None else "",
-                "Status da NFe": status
+                "Status da NFe": status,
+                "Observações da Nota": observacoes
             })
 
         return dados
     except ET.ParseError:
-        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}. Verifique se o arquivo está corrompido.")
+        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}.")
         return []
 
 
@@ -114,13 +124,11 @@ def processar_nfe_por_cabecalho(xml_path, ns):
         tree = ET.parse(xml_path)
         root = tree.getroot()
 
-        # Verificação de elementos-chave para evitar erros
         emit = root.find('.//ns:emit', ns)
         ide = root.find('.//ns:ide', ns)
         total = root.find('.//ns:total', ns)
-        
+
         if emit is None or ide is None or total is None:
-            # Retorna uma lista vazia se os elementos principais não forem encontrados
             return []
 
         chave_acesso_tag = root.find('.//ns:infProt/ns:chNFe', ns)
@@ -137,6 +145,16 @@ def processar_nfe_por_cabecalho(xml_path, ns):
 
         frete = root.find('.//ns:transp/ns:vFrete', ns)
         seguro = root.find('.//ns:transp/ns:vSeg', ns)
+
+        # ---- Observações da Nota ----
+        infadic = root.find('.//ns:infAdic', ns)
+        observacoes = ""
+        if infadic is not None:
+            inf_cpl = infadic.find('ns:infCpl', ns)
+            inf_fisco = infadic.find('ns:infAdFisco', ns)
+            observacoes = (inf_cpl.text if inf_cpl is not None else "")
+            if inf_fisco is not None:
+                observacoes += (" | " + inf_fisco.text if inf_cpl is not None else inf_fisco.text)
 
         return [{
             "Número NFe": numero_nfe,
@@ -158,10 +176,11 @@ def processar_nfe_por_cabecalho(xml_path, ns):
             "ICMS Desonerado": total.find('ns:ICMSTot/ns:vICMSDeson', ns).text if total.find('ns:ICMSTot/ns:vICMSDeson', ns) is not None else "",
             "CFOP": "",
             "CST ICMS": "",
-            "Status da NFe": status
+            "Status da NFe": status,
+            "Observações da Nota": observacoes
         }]
     except ET.ParseError:
-        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}. Verifique se o arquivo está corrompido.")
+        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}.")
         return []
 
 def processar_cte(xml_path, ns):
@@ -172,7 +191,6 @@ def processar_cte(xml_path, ns):
         tree = ET.parse(xml_path)
         root = tree.getroot()
 
-        # Verificação de elementos-chave para evitar erros
         ide = root.find('.//ns:ide', ns)
         emit = root.find('.//ns:emit', ns)
         valor_total = root.find('.//ns:vTPrest', ns)
@@ -180,7 +198,6 @@ def processar_cte(xml_path, ns):
         chave_acesso_tag = root.find('.//ns:infProt/ns:chCTe', ns)
 
         if ide is None or emit is None or valor_total is None or chave_acesso_tag is None:
-            # Retorna uma lista vazia se os elementos principais não forem encontrados
             return []
 
         chave_acesso = chave_acesso_tag.text if chave_acesso_tag is not None else ""
@@ -196,7 +213,7 @@ def processar_cte(xml_path, ns):
             "Chave de Acesso": chave_acesso
         }]
     except ET.ParseError:
-        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}. Verifique se o arquivo está corrompido.")
+        st.error(f"Erro ao analisar o arquivo XML: {os.path.basename(xml_path)}.")
         return []
 
 
@@ -289,5 +306,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
