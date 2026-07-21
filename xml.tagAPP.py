@@ -29,6 +29,7 @@ def processar_nfe_por_item(xml_path, ns):
         root = tree.getroot()
 
         emit = root.find('.//ns:emit', ns)
+        dest = root.find('.//ns:dest', ns)  # Captura a tag do destinatário
         ide = root.find('.//ns:ide', ns)
         total = root.find('.//ns:total', ns)
         det_list = root.findall('.//ns:det', ns)
@@ -45,6 +46,12 @@ def processar_nfe_por_item(xml_path, ns):
         emitente = emit.find('ns:xNome', ns).text if emit.find('ns:xNome', ns) is not None else ""
         cnpj_emitente = emit.find('ns:CNPJ', ns).text if emit.find('ns:CNPJ', ns) is not None else ""
         uf_emitente = emit.find('ns:enderEmit/ns:UF', ns).text if emit.find('ns:enderEmit/ns:UF', ns) is not None else ""
+        
+        # Extrai a UF do Destinatário
+        uf_destino = ""
+        if dest is not None and dest.find('ns:enderDest/ns:UF', ns) is not None:
+            uf_destino = dest.find('ns:enderDest/ns:UF', ns).text
+
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
 
@@ -94,6 +101,7 @@ def processar_nfe_por_item(xml_path, ns):
                 "CNPJ Emitente": cnpj_emitente,
                 "Emitente": emitente,
                 "UF Emitente": uf_emitente,
+                "UF Destino": uf_destino,  # <--- CAMPO ACRESCENTADO AQUI
                 "Valor da Nota": total.find('ns:ICMSTot/ns:vNF', ns).text if total.find('ns:ICMSTot/ns:vNF', ns) is not None else "",
                 "ICMS": icms_valor.text if icms_valor is not None else "",
                 "Alíquota ICMS": icms_aliquota.text if icms_aliquota is not None else "",
