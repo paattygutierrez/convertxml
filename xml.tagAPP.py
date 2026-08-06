@@ -78,9 +78,12 @@ def processar_nfe_por_item(xml_path, ns):
             if prod is None or imposto is None:
                 continue
 
-            # Código do Produto/Item
+            # Código do Produto/Item e NCM
             codigo_item = prod.find('ns:cProd', ns)
             codigo_item_val = codigo_item.text if codigo_item is not None else ""
+            
+            ncm = prod.find('ns:NCM', ns)
+            ncm_val = ncm.text if ncm is not None else ""
 
             icms = imposto.find('.//ns:ICMS', ns)
             icms_valor = icms.find('.//ns:vICMS', ns) if icms is not None else None
@@ -113,7 +116,8 @@ def processar_nfe_por_item(xml_path, ns):
                 "UF Emitente": uf_emitente,
                 "UF Destino": uf_destino,
                 "UF Entrega": uf_entrega,
-                "Código do Item": codigo_item_val,  # <--- NOVO CAMPO ACRESCENTADO AQUI
+                "Código do Item": codigo_item_val,
+                "NCM": ncm_val,  # <--- NOVO CAMPO ACRESCENTADO AO LADO DO CÓDIGO DO ITEM
                 "Valor da Nota": total.find('ns:ICMSTot/ns:vNF', ns).text if total.find('ns:ICMSTot/ns:vNF', ns) is not None else "",
                 "ICMS": icms_valor.text if icms_valor is not None else "",
                 "Alíquota ICMS": icms_aliquota.text if icms_aliquota is not None else "",
