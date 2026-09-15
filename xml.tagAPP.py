@@ -88,6 +88,7 @@ def processar_nfe_por_item(xml_path, ns):
             uf_entrega = entrega.find('ns:UF', ns).text
 
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
+        serie_nfe = ide.find('ns:serie', ns).text if ide.find('ns:serie', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
         
         # Extrai referências fiscais (<NFref>)
@@ -140,6 +141,7 @@ def processar_nfe_por_item(xml_path, ns):
 
             dados.append({
                 "Número NFe": numero_nfe,
+                "Série": serie_nfe,
                 "Data de Emissão": data_emissao,
                 "NF Referenciada": nf_referenciada,
                 "CNPJ Emitente": cnpj_emitente,
@@ -194,6 +196,7 @@ def processar_nfe_por_cabecalho(xml_path, ns):
         cnpj_emitente = emit.find('ns:CNPJ', ns).text if emit.find('ns:CNPJ', ns) is not None else ""
         uf_emitente = emit.find('ns:enderEmit/ns:UF', ns).text if emit.find('ns:enderEmit/ns:UF', ns) is not None else ""
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
+        serie_nfe = ide.find('ns:serie', ns).text if ide.find('ns:serie', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
         
         # Extrai referências fiscais (<NFref>)
@@ -207,6 +210,7 @@ def processar_nfe_por_cabecalho(xml_path, ns):
 
         return [{
             "Número NFe": numero_nfe,
+            "Série": serie_nfe,
             "Data de Emissão": data_emissao,
             "NF Referenciada": nf_referenciada,
             "CNPJ Emitente": cnpj_emitente,
@@ -237,14 +241,17 @@ def processar_cte(xml_path, ns):
         ide = root.find('.//ns:ide', ns)
         emit = root.find('.//ns:emit', ns)
         valor_total = root.find('.//ns:vTPrest', ns)
-        icms = root.find('.//ns:ICMS00', ns)
         chave_acesso_tag = root.find('.//ns:infProt/ns:chCTe', ns)
 
         if ide is None or emit is None or valor_total is None:
             return []
 
+        numero_cte = ide.find('ns:nCT', ns).text if ide.find('ns:nCT', ns) is not None else ""
+        serie_cte = ide.find('ns:serie', ns).text if ide.find('ns:serie', ns) is not None else ""
+
         return [{
-            "Número CTe": ide.find('ns:nCT', ns).text if ide.find('ns:nCT', ns) is not None else "",
+            "Número CTe": numero_cte,
+            "Série": serie_cte,
             "Data de Emissão": ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else "",
             "CNPJ Emitente": emit.find('ns:CNPJ', ns).text if emit.find('ns:CNPJ', ns) is not None else "",
             "Emitente": emit.find('ns:xNome', ns).text if emit.find('ns:xNome', ns) is not None else "",
