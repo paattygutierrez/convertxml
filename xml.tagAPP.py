@@ -20,6 +20,37 @@ def extrair_xmls_de_zip(zip_path, extract_path):
                 xml_files.append(os.path.join(root, file))
     return xml_files
 
+def extrair_nfref(ide, ns):
+    """
+    Extrai as chaves ou identificadores das tags <NFref> presentes em <ide>.
+    """
+    if ide is None:
+        return ""
+    
+    nfref_elements = ide.findall('ns:NFref', ns)
+    referencias = []
+    
+    for ref in nfref_elements:
+        # Chave de acesso de NF-e / NFC-e referenciada
+        ref_nfe = ref.find('ns:refNFe', ns)
+        if ref_nfe is not None and ref_nfe.text:
+            referencias.append(ref_nfe.text)
+            continue
+        
+        # NF Modelo 1/1A referenciada
+        ref_nf = ref.find('ns:refNF/ns:nNF', ns)
+        if ref_nf is not None and ref_nf.text:
+            referencias.append(f"NF-{ref_nf.text}")
+            continue
+
+        # Cupom Fiscal referenciado
+        ref_ecf = ref.find('ns:refECF/ns:nCOO', ns)
+        if ref_ecf is not None and ref_ecf.text:
+            referencias.append(f"ECF-{ref_ecf.text}")
+            continue
+
+    return ", ".join(referencias)
+
 def processar_nfe_por_item(xml_path, ns):
     """
     Processa um arquivo XML de NFe extraindo dados por item.
@@ -29,8 +60,8 @@ def processar_nfe_por_item(xml_path, ns):
         root = tree.getroot()
 
         emit = root.find('.//ns:emit', ns)
-        dest = root.find('.//ns:dest', ns)  # Captura o destinatário
-        entrega = root.find('.//ns:entrega', ns)  # Captura o local de entrega (se houver)
+        dest = root.find('.//ns:dest', ns)
+        entrega = root.find('.//ns:entrega', ns)
         ide = root.find('.//ns:ide', ns)
         total = root.find('.//ns:total', ns)
         det_list = root.findall('.//ns:det', ns)
@@ -48,18 +79,19 @@ def processar_nfe_por_item(xml_path, ns):
         cnpj_emitente = emit.find('ns:CNPJ', ns).text if emit.find('ns:CNPJ', ns) is not None else ""
         uf_emitente = emit.find('ns:enderEmit/ns:UF', ns).text if emit.find('ns:enderEmit/ns:UF', ns) is not None else ""
         
-        # Extrai a UF do Destinatário
         uf_destino = ""
         if dest is not None and dest.find('ns:enderDest/ns:UF', ns) is not None:
             uf_destino = dest.find('ns:enderDest/ns:UF', ns).text
 
-        # Extrai a UF de Entrega (se informada)
         uf_entrega = ""
         if entrega is not None and entrega.find('ns:UF', ns) is not None:
             uf_entrega = entrega.find('ns:UF', ns).text
 
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
+        
+        # Extrai referências fiscais (<NFref>)
+        nf_referenciada = extrair_nfref(ide, ns)
 
         infadic = root.find('.//ns:infAdic', ns)
         observacoes = ""
@@ -78,7 +110,6 @@ def processar_nfe_por_item(xml_path, ns):
             if prod is None or imposto is None:
                 continue
 
-            # Código do Produto/Item e NCM
             codigo_item = prod.find('ns:cProd', ns)
             codigo_item_val = codigo_item.text if codigo_item is not None else ""
             
@@ -102,7 +133,6 @@ def processar_nfe_por_item(xml_path, ns):
             frete = root.find('.//ns:transp/ns:vFrete', ns)
             seguro = root.find('.//ns:transp/ns:vSeg', ns)
 
-            # IBS / CBS 
             ibs_valor = imposto.find('.//ns:vIBS', ns)
             ibs_cst = imposto.find('.//ns:CST', ns)
             cbs_valor = imposto.find('.//ns:vCBS', ns)
@@ -111,13 +141,14 @@ def processar_nfe_por_item(xml_path, ns):
             dados.append({
                 "Número NFe": numero_nfe,
                 "Data de Emissão": data_emissao,
+                "NF Referenciada": nf_referenciada,
                 "CNPJ Emitente": cnpj_emitente,
                 "Emitente": emitente,
                 "UF Emitente": uf_emitente,
                 "UF Destino": uf_destino,
                 "UF Entrega": uf_entrega,
                 "Código do Item": codigo_item_val,
-                "NCM": ncm_val,  # <--- NOVO CAMPO ACRESCENTADO AO LADO DO CÓDIGO DO ITEM
+                "NCM": ncm_val,
                 "Valor da Nota": total.find('ns:ICMSTot/ns:vNF', ns).text if total.find('ns:ICMSTot/ns:vNF', ns) is not None else "",
                 "ICMS": icms_valor.text if icms_valor is not None else "",
                 "Alíquota ICMS": icms_aliquota.text if icms_aliquota is not None else "",
@@ -164,6 +195,9 @@ def processar_nfe_por_cabecalho(xml_path, ns):
         uf_emitente = emit.find('ns:enderEmit/ns:UF', ns).text if emit.find('ns:enderEmit/ns:UF', ns) is not None else ""
         numero_nfe = ide.find('ns:nNF', ns).text if ide.find('ns:nNF', ns) is not None else ""
         data_emissao = ide.find('ns:dhEmi', ns).text if ide.find('ns:dhEmi', ns) is not None else ""
+        
+        # Extrai referências fiscais (<NFref>)
+        nf_referenciada = extrair_nfref(ide, ns)
 
         frete = root.find('.//ns:transp/ns:vFrete', ns)
         seguro = root.find('.//ns:transp/ns:vSeg', ns)
@@ -174,6 +208,7 @@ def processar_nfe_por_cabecalho(xml_path, ns):
         return [{
             "Número NFe": numero_nfe,
             "Data de Emissão": data_emissao,
+            "NF Referenciada": nf_referenciada,
             "CNPJ Emitente": cnpj_emitente,
             "Emitente": emitente,
             "UF Emitente": uf_emitente,
