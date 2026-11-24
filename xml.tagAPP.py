@@ -178,8 +178,8 @@ def processar_nfe_por_item(xml_path, ns):
                 "ICMS Desonerado": icms_desonerado.text if icms_desonerado is not None else "",
                 "CFOP": cfop.text if cfop is not None else "",
                 "Status da NFe": status,
-                "Observações da Nota": observacoes
-                "Informações Adicionais": inf_ad_prod_val,
+                "Observações da Nota": observacoes,
+                "Informações Adicionais": inf_ad_prod_val
             })
         return dados
     except Exception as e:
