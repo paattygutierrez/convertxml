@@ -120,6 +120,9 @@ def processar_nfe_por_item(xml_path, ns):
             ncm = prod.find('ns:NCM', ns)
             ncm_val = ncm.text if ncm is not None else ""
 
+            inf_ad_prod = det.find('ns:infAdProd',ns)
+            inf_ad_prod_val = inf_ad_prod.text if inf_ad_prod is not None else ""
+
             icms = imposto.find('.//ns:ICMS', ns)
             icms_valor = icms.find('.//ns:vICMS', ns) if icms is not None else None
             icms_aliquota = icms.find('.//ns:pICMS', ns) if icms is not None else None
@@ -141,6 +144,7 @@ def processar_nfe_por_item(xml_path, ns):
             ibs_cst = imposto.find('.//ns:CST', ns)
             cbs_valor = imposto.find('.//ns:vCBS', ns)
             cbs_cst = imposto.find('.//ns:CST', ns)
+
 
             dados.append({
                 "Número NFe": numero_nfe,
@@ -175,6 +179,7 @@ def processar_nfe_por_item(xml_path, ns):
                 "CFOP": cfop.text if cfop is not None else "",
                 "Status da NFe": status,
                 "Observações da Nota": observacoes
+                "Informações Adicionais": inf_ad_prod_val,
             })
         return dados
     except Exception as e:
